@@ -1,0 +1,1 @@
+extern void *interface (void *arg);
