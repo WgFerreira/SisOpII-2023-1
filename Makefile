@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-std=c++20 -Wall -Wextra
+CXXFLAGS=-std=c++23 -Wall -Wextra
 BIN=server
 
 SRC=$(wildcard *.cpp)
