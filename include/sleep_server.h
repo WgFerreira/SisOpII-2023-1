@@ -13,7 +13,7 @@ enum StationType {
 class Station 
 {
     public:
-    StationType type;
+    StationType type = PARTICIPANT;
     int address;
 
     //public: 

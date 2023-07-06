@@ -15,7 +15,8 @@
 int main(int argc, const char *argv[]) {
 
     auto *station = new Station();
-    station->init(argv[1]);    
+    if (argv[1] != NULL)
+        station->init(argv[1]);    
 
     auto th_discovery = std::async(&discovery, station);
 
