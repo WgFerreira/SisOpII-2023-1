@@ -16,7 +16,6 @@ class Station
     StationType type = PARTICIPANT;
     int address;
 
-    //public: 
     void init(std::string arg);
 };
 

@@ -1,1 +1,6 @@
-extern void *interface (void *arg);
+#ifndef _INTERFACE_H
+#define _INTERFACE_H
+
+void *interface (void *arg);
+
+#endif
