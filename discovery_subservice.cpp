@@ -24,6 +24,9 @@ void *discovery::server (Station* station) {
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
         std::cerr << "ERROR opening socket" << std::endl;
 
+    int broadcastEnable=1;
+    int ret=setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -73,6 +76,9 @@ void *discovery::client (Station* station) {
     
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
         std::cout << "ERROR opening socket" << std::endl;
+        
+    int broadcastEnable=1;
+    int ret=setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
     
     serv_addr.sin_family = AF_INET;     
     serv_addr.sin_port = htons(PORT);    
@@ -88,12 +94,12 @@ void *discovery::client (Station* station) {
     if (n < 0) 
         std::cout << "ERROR sendto" << std::endl;
     
-    // length = sizeof(struct sockaddr_in);
-    // n = recvfrom(sockfd, buffer, 256, 0, (struct sockaddr *) &from, &length);
-    // if (n < 0)
-    //     std::cout << "ERROR recvfrom" << std::endl;
+    length = sizeof(struct sockaddr_in);
+    n = recvfrom(sockfd, buffer, 256, 0, (struct sockaddr *) &from, &length);
+    if (n < 0)
+        std::cout << "ERROR recvfrom" << std::endl;
 
-    // std::cout << "Got an ack: " << buffer << std::endl;
+    std::cout << "Got an ack: " << buffer << std::endl;
     
     close(sockfd);
 
