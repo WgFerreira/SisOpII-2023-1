@@ -1,6 +1,10 @@
-#include <stdio.h>
+#include <iostream>
 
-void *interface (void *arg) {
-    printf("interface subservice\n");
-    return 0;
+#include "include/interface_subservice.h"
+#include "include/sleep_server.h"
+
+void *interface::server (Station* station) {
+}
+
+void *interface::client (Station* station) {
 }

@@ -1,6 +1,10 @@
-#include <stdio.h>
+#include <iostream>
 
-void *monitoring (void *arg) {
-    printf("monitoring subservice\n");
-    return 0;
+#include "include/monitoring_subservice.h"
+#include "include/sleep_server.h"
+
+void *monitoring::server (Station* station) {
+}
+
+void *monitoring::client (Station* station) {
 }

@@ -1,6 +1,10 @@
-#include <stdio.h>
+#include <iostream>
 
-void *management (void *arg) {
-    printf("management subservice\n");
-    return 0;
+#include "include/management_subservice.h"
+#include "include/sleep_server.h"
+
+void *management::server (Station* station) {
+}
+
+void *management::client (Station* station) {
 }

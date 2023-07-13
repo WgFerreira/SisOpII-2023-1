@@ -1,6 +1,13 @@
 #ifndef _MANAGEMENT_H
 #define _MANAGEMENT_H
 
-void *management (void *arg);
+#include "sleep_server.h"
+
+namespace management {
+  
+  void *server (Station* station);
+  void *client (Station* station);
+
+};
 
 #endif

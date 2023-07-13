@@ -9,13 +9,6 @@
 #include "include/sleep_server.h"
 
 void *discovery::server (Station* station) {
-    std::cout << "descobrindo" << std::endl;
-
-    if (station->type == MANAGER)
-        std::cout << "sou uma estação manager" << std::endl;
-    else
-        std::cout << "sou só uma estação participante" << std::endl;
-
     int sockfd, n;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -55,24 +48,11 @@ void *discovery::server (Station* station) {
 }
 
 void *discovery::client (Station* station) {
-    std::cout << "descobrindo" << std::endl;
-
-    if (station->type == MANAGER)
-        std::cout << "sou uma estação manager" << std::endl;
-    else
-        std::cout << "sou só uma estação participante" << std::endl;
-
     int sockfd, n;
     unsigned int length;
     struct sockaddr_in serv_addr, from;
     struct hostent *server;
     char buffer[256];
-    
-    server = gethostbyname("172.30.191.255"); // broadcast
-    if (server == NULL) {
-        std::cerr << "ERROR, no such host" << std::endl;
-        return 0;
-    }
     
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
         std::cout << "ERROR opening socket" << std::endl;
@@ -82,8 +62,7 @@ void *discovery::client (Station* station) {
     
     serv_addr.sin_family = AF_INET;     
     serv_addr.sin_port = htons(PORT);    
-    serv_addr.sin_addr.s_addr = INADDR_BROADCAST;//*((struct in_addr *)server->h_addr);
-    std::cout << INADDR_BROADCAST << std::endl;
+    serv_addr.sin_addr.s_addr = INADDR_BROADCAST;
     memset(&(serv_addr.sin_zero), 0, 8);  
 
     std::cout << "Enter the message: " << std::endl;
