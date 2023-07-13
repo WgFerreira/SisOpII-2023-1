@@ -1,6 +1,6 @@
 CXX=g++
 CXXFLAGS=-std=c++23 -Wall -Wextra
-BIN=server
+BIN=sleep_server
 
 SRC=$(wildcard *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
