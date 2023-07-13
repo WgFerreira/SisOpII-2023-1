@@ -5,8 +5,16 @@
 
 namespace interface {
   
-  void *server (Station* station);
-  void *client (Station* station);
+  /**
+   * Apresenta tabela de hosts apara a estação líder, ou informações da
+   * estação líder para a estação participante
+  */
+  void *print (Station* station);
+
+  /**
+   * Espera comando EXIT ou WAKEUP host
+  */
+  void *getCommand (Station* station);
 
 };
 

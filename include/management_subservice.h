@@ -5,8 +5,10 @@
 
 namespace management {
   
-  void *server (Station* station);
-  void *client (Station* station);
+  /**
+   * Não entendi o que tem que fazer aqui
+  */
+  void *manageHostTable (Station* station);
 
 };
 

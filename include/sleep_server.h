@@ -23,6 +23,7 @@ enum PacketType: uint16_t {
     DATA_PACKET,
     CMD_PACKET
 };
+
 struct __packet {
     PacketType type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
