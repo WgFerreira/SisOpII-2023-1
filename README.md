@@ -4,13 +4,19 @@ Repositório destinado ao desenvolvimento do projeto Sleep Management da discipl
 Alunos: Guilherme Sales e Wagner Gomes Ferreira
 
 Pré-requisitos:
-    Ubuntu 22.04
-    g++ 11.3.0
-    GNU Make
+* Ubuntu 22.04
+* g++ 11.3.0
+* GNU Make
 
 Para compilar:
-    make
+
+```sh
+$ make
+```
 
 Para executar:
-    .\sleep_server
-    .\sleep_server manager
+
+```sh
+.\sleep_server
+.\sleep_server manager
+```
