@@ -12,11 +12,14 @@ enum StationType {
 
 class Station 
 {
-    public:
+public:
     StationType type = PARTICIPANT;
-    int address;
+    std::string macAddress;
 
     void init(std::string arg);
+
+private:
+    std::string extractMacAddress();
 };
 
 enum PacketType: uint16_t {
