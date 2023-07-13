@@ -1,0 +1,6 @@
+
+*.o
+*.exe
+sleep_server
+
+*.swp
