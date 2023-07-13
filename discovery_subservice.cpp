@@ -2,8 +2,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
+#include <arpa/inet.h>
 
 #include "include/discovery_subservice.h"
 #include "include/sleep_server.h"
@@ -35,7 +34,10 @@ void *discovery::server (Station* station) {
         n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *) &cli_addr, &clilen);
         if (n < 0) 
             std::cerr << "ERROR on recvfrom" << std::endl;
-        std::cout << "Received a datagram: " << buf << std::endl;
+        
+        char ipAddress[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(cli_addr.sin_addr), ipAddress, INET_ADDRSTRLEN);
+        std::cout << "Received a datagram from " << ipAddress << ": " << buf << std::endl;
         
         /* send to socket */
         n = sendto(sockfd, "Got your message\n", 17, 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
