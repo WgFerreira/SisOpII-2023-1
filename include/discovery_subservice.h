@@ -2,7 +2,12 @@
 #define _DISCOVERY_H
 
 #include "sleep_server.h"
+namespace discovery {
+  
+  void *server (Station* station);
+  void *client (Station* station);
 
-void *discovery (Station* station);
+};
+
 
 #endif

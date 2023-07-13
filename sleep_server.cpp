@@ -18,9 +18,16 @@ int main(int argc, const char *argv[]) {
     if (argv[1] != NULL)
         station->init(argv[1]);    
 
-    auto th_discovery = std::async(&discovery, station);
-
-    th_discovery.wait();
+    if (station->type == MANAGER)
+    {
+        auto th_discovery = std::async(&discovery::server, station);
+        th_discovery.wait();
+    }
+    else
+    {
+        auto th_discovery = std::async(&discovery::client, station);
+        th_discovery.wait();
+    }
 
 
     return 0;
