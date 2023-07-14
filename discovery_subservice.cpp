@@ -12,16 +12,16 @@ void *discovery::server (Station* station) {
     int sockfd;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
-        std::cerr << "ERROR opening socket" << std::endl;
+        std::cerr << "ERROR opening socket : discovery" << std::endl;
 
     struct sockaddr_in addr, recv;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
+    addr.sin_port = htons(DISCOVERY_PORT);
     addr.sin_addr.s_addr = INADDR_ANY;
     memset(&(addr.sin_zero), 0, 8);    
 
     if (bind(sockfd, (struct sockaddr *) &addr, sizeof(struct sockaddr)) < 0) 
-        std::cerr << "ERROR on binding" << std::endl;
+        std::cerr << "ERROR on binding : discovery" << std::endl;
 
     struct packet recv_data;
     socklen_t clilen = sizeof(struct sockaddr_in);
@@ -30,7 +30,7 @@ void *discovery::server (Station* station) {
     {
         int n = recvfrom(sockfd, (struct packet *) &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &recv, &clilen);
         if (n < 0) 
-            std::cerr << "ERROR on recvfrom" << std::endl;
+            std::cerr << "ERROR on recvfrom : discovery" << std::endl;
             
         char ip_address[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(recv.sin_addr), ip_address, INET_ADDRSTRLEN);
@@ -55,7 +55,7 @@ void *discovery::server (Station* station) {
         /* send to socket */
         n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0,(struct sockaddr *) &recv, clilen);
         if (n  < 0) 
-            std::cerr << "ERROR on sendto" << std::endl;
+            std::cerr << "ERROR on sendto : discovery" << std::endl;
     }
 
     close(sockfd);
@@ -67,16 +67,16 @@ void *discovery::client (Station* station) {
     int sockfd;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-        std::cout << "ERROR opening socket" << std::endl;
+        std::cout << "ERROR opening socket : discovery" << std::endl;
 
     int broadcastEnable=1;
     int ret=setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
     if (ret < 0)
-        std::cout << "ERROR option broadcast" << std::endl;
+        std::cout << "ERROR option broadcast : discovery" << std::endl;
     
     struct sockaddr_in addr, recv;
     addr.sin_family = AF_INET;     
-    addr.sin_port = htons(PORT);    
+    addr.sin_port = htons(DISCOVERY_PORT);
     addr.sin_addr.s_addr = INADDR_BROADCAST;
     memset(&(addr.sin_zero), 0, 8);
 
@@ -92,12 +92,12 @@ void *discovery::client (Station* station) {
 
     int n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0, (const struct sockaddr *) &addr, sizeof(struct sockaddr_in));
     if (n < 0) 
-        std::cout << "ERROR sendto" << std::endl;
+        std::cout << "ERROR sendto : discovery" << std::endl;
         
     socklen_t length = sizeof(struct sockaddr_in);
     n = recvfrom(sockfd, (struct packet *) &buffer, sizeof(buffer), 0, (struct sockaddr *) &recv, &length);
     if (n < 0)
-        std::cout << "ERROR recvfrom" << std::endl;
+        std::cout << "ERROR recvfrom : discovery" << std::endl;
 
     std::cout << "Got an ack: " << buffer._payload << std::endl;
     std::cout << buffer.station.hostname << " "  << buffer.station.macAddress << std::endl;

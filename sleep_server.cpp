@@ -31,12 +31,16 @@ int main(int argc, const char *argv[]) {
     if (station->type == MANAGER)
     {
         auto th_discovery = std::async(&discovery::server, station);
+        auto th_monitor = std::async(&monitoring::server, station);
         th_discovery.wait();
+        th_monitor.wait();
     }
     else
     {
         auto th_discovery = std::async(&discovery::client, station);
+        auto th_monitor = std::async(&monitoring::client, station);
         th_discovery.wait();
+        th_monitor.wait();
     }
 
 

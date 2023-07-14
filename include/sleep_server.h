@@ -4,7 +4,8 @@
 #include <string>
 #include <limits.h>
 
-#define PORT 5555
+#define DISCOVERY_PORT 5555
+#define MONITOR_PORT 5556
 
 enum StationType : uint8_t 
 {
