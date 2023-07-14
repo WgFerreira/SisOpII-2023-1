@@ -27,12 +27,13 @@ enum PacketType: uint16_t {
     CMD_PACKET
 };
 
-struct __packet {
+struct packet 
+{
     PacketType type; //Tipo do pacote (p.ex. DATA | CMD)
     uint16_t seqn; //Número de sequência
     uint16_t length; //Comprimento do payload
-    uint16_t timestamp; // Timestamp do dado
-    const char* _payload; //Dados da mensagem
+    uint64_t timestamp; // Timestamp do dado
+    char _payload[255]; //Dados da mensagem
 };
 
 #endif
