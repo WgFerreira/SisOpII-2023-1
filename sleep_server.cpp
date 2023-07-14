@@ -18,12 +18,15 @@
 // Constants
 #define TKN_MANAGER "manager"
 
+struct station_entry hostTable;
+
 int main(int argc, const char *argv[]) {
 
     auto *station = new Station();
     if (argv[1] != NULL)
         station->init(argv[1]);    
     station->extractMacAddress();
+    gethostname(station->hostname, HOST_NAME_MAX);
 
     if (station->type == MANAGER)
     {

@@ -35,7 +35,12 @@ void *discovery::server (Station* station) {
         char ip_address[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(recv.sin_addr), ip_address, INET_ADDRSTRLEN);
         std::cout << "Received a datagram from " << ip_address << ": " << recv_data._payload << std::endl;
-        std::cout << recv_data.station.macAddress << std::endl;
+        std::cout << recv_data.station.hostname << " " << recv_data.station.macAddress << std::endl;
+
+        hostTable.hostName = recv_data.station.hostname;
+        hostTable.ipAddress = ip_address;
+        hostTable.macAddress = recv_data.station.macAddress;
+        hostTable.status = AWAKEN;
         
         struct packet buffer;
         buffer.type = DATA_PACKET;
@@ -95,7 +100,7 @@ void *discovery::client (Station* station) {
         std::cout << "ERROR recvfrom" << std::endl;
 
     std::cout << "Got an ack: " << buffer._payload << std::endl;
-    std::cout << buffer.station.macAddress << std::endl;
+    std::cout << buffer.station.hostname << " "  << buffer.station.macAddress << std::endl;
     
     close(sockfd);
 
