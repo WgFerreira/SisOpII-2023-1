@@ -23,6 +23,7 @@ int main(int argc, const char *argv[]) {
     auto *station = new Station();
     if (argv[1] != NULL)
         station->init(argv[1]);    
+    station->extractMacAddress();
 
     if (station->type == MANAGER)
     {
@@ -42,18 +43,12 @@ int main(int argc, const char *argv[]) {
 void Station::init(std::string arg)
 {
     if (arg == TKN_MANAGER)
-    {
         this->type = StationType::MANAGER;
-    }
-    else 
-    {
+    else
         this->type = StationType::PARTICIPANT;
-    }
-
-    this->macAddress = this->extractMacAddress();
 }
 
-std::string Station::extractMacAddress() 
+void Station::extractMacAddress() 
 {
 	struct ifreq ifr;
 	
@@ -68,7 +63,5 @@ std::string Station::extractMacAddress()
 	
 	unsigned char* mac = (unsigned char *)ifr.ifr_addr.sa_data;
 	
-    char buffer[18];
-	sprintf(buffer, (const char *)"%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    return buffer;
+	sprintf(this->macAddress, (const char *)"%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 }

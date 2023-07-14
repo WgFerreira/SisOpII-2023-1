@@ -28,13 +28,14 @@ void *discovery::server (Station* station) {
 
     while (true)
     {
-        int n = recvfrom(sockfd, (struct packet *) &recv_data, sizeof(recv_data), 0, (struct sockaddr *) &recv, &clilen);
+        int n = recvfrom(sockfd, (struct packet *) &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &recv, &clilen);
         if (n < 0) 
             std::cerr << "ERROR on recvfrom" << std::endl;
             
         char ip_address[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(recv.sin_addr), ip_address, INET_ADDRSTRLEN);
         std::cout << "Received a datagram from " << ip_address << ": " << recv_data._payload << std::endl;
+        std::cout << recv_data.station.macAddress << std::endl;
         
         struct packet buffer;
         buffer.type = DATA_PACKET;
@@ -44,6 +45,7 @@ void *discovery::server (Station* station) {
         char* payload = "I'm the leader\0";
         buffer.length = strnlen(payload, 255);
         strncpy((char*) buffer._payload, payload, buffer.length);
+        buffer.station = *station;
 
         /* send to socket */
         n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0,(struct sockaddr *) &recv, clilen);
@@ -81,6 +83,7 @@ void *discovery::client (Station* station) {
     char* payload = "sleep service discovery\0";
     buffer.length = strnlen(payload, 255);
     strncpy((char*) buffer._payload, payload, buffer.length);
+    buffer.station = *station;
 
     int n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0, (const struct sockaddr *) &addr, sizeof(struct sockaddr_in));
     if (n < 0) 
@@ -91,9 +94,8 @@ void *discovery::client (Station* station) {
     if (n < 0)
         std::cout << "ERROR recvfrom" << std::endl;
 
-    std::cout << sizeof(buffer) << std::endl;
     std::cout << "Got an ack: " << buffer._payload << std::endl;
-    // std::cout << buffer.station.macAddress << std::endl;
+    std::cout << buffer.station.macAddress << std::endl;
     
     close(sockfd);
 

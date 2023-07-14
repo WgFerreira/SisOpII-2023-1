@@ -5,7 +5,7 @@
 
 #define PORT 5555
 
-enum StationType {
+enum StationType : uint8_t {
     MANAGER,
     PARTICIPANT
 };
@@ -14,12 +14,10 @@ class Station
 {
 public:
     StationType type = PARTICIPANT;
-    std::string macAddress;
+    char macAddress[18];
 
     void init(std::string arg);
-
-private:
-    std::string extractMacAddress();
+    void extractMacAddress();
 };
 
 enum PacketType: uint16_t {
@@ -33,6 +31,7 @@ struct packet
     uint16_t seqn; //Número de sequência
     uint16_t length; //Comprimento do payload
     uint64_t timestamp; // Timestamp do dado
+    Station station;
     char _payload[255]; //Dados da mensagem
 };
 
