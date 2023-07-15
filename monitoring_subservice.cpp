@@ -19,20 +19,14 @@ void *monitoring::server (Station* station)
     
     struct sockaddr_in addr, recv_addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(MONITOR_PORT);
+    addr.sin_port = htons(PORT);
     memset(&(addr.sin_zero), 0, 8);
 
     while (true) 
     {
-        struct hostent *server;
         if (hostTable.ipAddress.length() > 0) 
         {
-            std::cout << hostTable.ipAddress << std::endl;
-            server = gethostbyname(hostTable.ipAddress.c_str());
-            if (server == NULL)
-                std::cerr << "ERROR, no such host : monitor" << std::endl;
-
-            addr.sin_addr = *((struct in_addr *) server->h_addr);
+            addr.sin_addr.s_addr = inet_addr(hostTable.ipAddress.c_str());
         
             struct packet buffer;
             buffer.type = DATA_PACKET;
@@ -63,7 +57,7 @@ void *monitoring::client (Station* station) {
 
     struct sockaddr_in recv_addr, send_addr;
     recv_addr.sin_family = AF_INET;
-    recv_addr.sin_port = htons(MONITOR_PORT);
+    recv_addr.sin_port = htons(PORT);
     recv_addr.sin_addr.s_addr = INADDR_ANY;
     memset(&(recv_addr.sin_zero), 0, 8);
 

@@ -16,7 +16,7 @@ void *discovery::server (Station* station) {
 
     struct sockaddr_in addr, recv;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(DISCOVERY_PORT);
+    addr.sin_port = htons(PORT);
     addr.sin_addr.s_addr = INADDR_ANY;
     memset(&(addr.sin_zero), 0, 8);    
 
@@ -76,7 +76,7 @@ void *discovery::client (Station* station) {
     
     struct sockaddr_in addr, recv;
     addr.sin_family = AF_INET;     
-    addr.sin_port = htons(DISCOVERY_PORT);
+    addr.sin_port = htons(PORT);
     addr.sin_addr.s_addr = INADDR_BROADCAST;
     memset(&(addr.sin_zero), 0, 8);
 
