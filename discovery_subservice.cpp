@@ -43,7 +43,7 @@ void *discovery::server (Station* station) {
         hostTable.status = AWAKEN;
         
         struct packet buffer;
-        buffer.type = DATA_PACKET;
+        buffer.type = SLEEP_SERVICE_DISCOVERY;
         buffer.seqn = 0;
         buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch() ).count();
@@ -81,7 +81,7 @@ void *discovery::client (Station* station) {
     memset(&(addr.sin_zero), 0, 8);
 
     struct packet buffer;
-    buffer.type = DATA_PACKET;
+    buffer.type = SLEEP_SERVICE_DISCOVERY;
     buffer.seqn = 0;
     buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::system_clock::now().time_since_epoch() ).count();
@@ -100,7 +100,7 @@ void *discovery::client (Station* station) {
         std::cout << "ERROR recvfrom : discovery" << std::endl;
 
     std::cout << "Got an ack: " << buffer._payload << std::endl;
-    std::cout << buffer.station.hostname << " "  << buffer.station.macAddress << std::endl;
+    std::cout << buffer.station.hostname << " " << buffer.station.macAddress << std::endl;
     
     close(sockfd);
 

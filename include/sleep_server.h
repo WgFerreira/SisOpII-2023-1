@@ -43,8 +43,8 @@ extern struct station_entry hostTable;
 
 enum PacketType: uint16_t 
 {
-    DATA_PACKET,
-    CMD_PACKET
+    SLEEP_SERVICE_DISCOVERY,
+    SLEEP_STATUS_REQUEST
 };
 
 struct packet 

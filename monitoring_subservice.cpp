@@ -29,7 +29,7 @@ void *monitoring::server (Station* station)
             addr.sin_addr.s_addr = inet_addr(hostTable.ipAddress.c_str());
         
             struct packet buffer;
-            buffer.type = DATA_PACKET;
+            buffer.type = SLEEP_STATUS_REQUEST;
             buffer.seqn = 0;
             buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
                     std::chrono::system_clock::now().time_since_epoch() ).count();
@@ -38,8 +38,19 @@ void *monitoring::server (Station* station)
             strncpy((char *) buffer._payload, payload, buffer.length);
 
             socklen_t length = sizeof(struct sockaddr_in);
-            int n = sendto(sockfd, &buffer, sizeof(buffer), 0, (struct sockaddr *) &recv_addr, length);
-            std::cout << n << "/" << sizeof(buffer) << std::endl;
+            int n = sendto(sockfd, &buffer, sizeof(buffer), 0, (struct sockaddr *) &addr, length);
+            if (n < 0)
+                std::cout << "ERROR sendto : monitor" << std::endl;
+            
+            struct packet recv_data;
+            n = recvfrom(sockfd, &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &recv_addr, &length);
+            if (n < 0)
+                std::cout << "ERROR recvfrom : monitor" << std::endl;
+            
+            if (recv_data.type = SLEEP_STATUS_REQUEST)
+            {
+                std::cout << "Station status: " << recv_data.station.macAddress << recv_data._payload << std::endl;
+            }
 
             sleep(10);
         }
@@ -73,7 +84,25 @@ void *monitoring::client (Station* station) {
         if (n < 0)
             std::cerr << "ERROR on recvfrom : monitor" << std::endl;
 
-        std::cout << recv_data.type << std::endl;
+        if (recv_data.type == SLEEP_STATUS_REQUEST)
+        {
+            struct packet send_data;
+            send_data.type = SLEEP_STATUS_REQUEST;
+            send_data.seqn = 0;
+            send_data.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch() ).count();
+            char* payload = "AWAKEN";
+            send_data.length = strnlen(payload, 255);
+            strncpy((char *) send_data._payload, payload, send_data.length);
+            send_data.station = *station;
+
+            /* send to socket */
+            n = sendto(sockfd, (struct packet *) &send_data, sizeof(send_data), 0,(struct sockaddr *) &send_addr, send_addr_len);
+            if (n  < 0) 
+                std::cerr << "ERROR on sendto : monitor" << std::endl;
+        }
+
+        
     }
     close(sockfd);
 }
