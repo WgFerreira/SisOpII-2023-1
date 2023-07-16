@@ -34,6 +34,8 @@ void *monitoring::server (Station* station)
             int size = recv_retry(sockfd, &received_data, sizeof(struct packet), &server_addr, &server_addr_len);
             if (size > 0)
             {
+                inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
+
                 Station participant = Station::deserialize(received_data.station);
                 hostTable.status = participant.status;
                 std::cout << "Got a sleep status packet from " << participant.ipAddress << ": " << received_data._payload << std::endl;
@@ -74,7 +76,11 @@ void *monitoring::client (Station* station)
             {
                 if (client_data.type == SLEEP_STATUS_REQUEST)
                 {
-                    std::cout << "Got a sleep status request from " << client_data.station.ipAddress << ": " << client_data._payload << std::endl;
+                    char client_ip_addr[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip_addr, INET_ADDRSTRLEN);
+                    std::cout << "Got a sleep status request from " << client_ip_addr << ": " << client_data._payload << std::endl;
+
+                    station->ipAddress = client_data.station.ipAddress;
 
                     struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "AWAKEN");
                     data.station = station->serialize();
