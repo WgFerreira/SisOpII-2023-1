@@ -35,7 +35,7 @@ void *discovery::server (Station* station)
                 Station participant = Station::deserialize(client_data.station);
                 hostTable = participant;
 
-                std::cout << "Received a datagram from " << participant.ipAddress << ": " << client_data._payload << std::endl;
+                std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
                 std::cout << participant.hostname << " " << participant.macAddress << std::endl;
 
                 struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
@@ -93,6 +93,8 @@ void *discovery::client (Station* station)
                     
                     Station manager = Station::deserialize(received_data.station);
                     station->setManager(&manager);
+
+                    std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
             }
         }
@@ -113,13 +115,21 @@ void *discovery::client (Station* station)
                     
                     Station manager = Station::deserialize(received_data.station);
                     station->setManager(&manager);
+                    
+                    std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
                 /* Se for um pacote de exiting, não tem mais manager */
                 else if (received_data.type == SLEEP_SERVICE_EXITING)
+                {
                     station->setManager(NULL);
+
+                    std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;
+                }
             }
         }
     }
+    
+    std::cout << "Leaving Sleep Service" << std::endl;
     
     if (station->getManager() == NULL)
     {

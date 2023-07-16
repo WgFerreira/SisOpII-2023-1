@@ -36,9 +36,13 @@ void *monitoring::server (Station* station)
             {
                 Station participant = Station::deserialize(received_data.station);
                 hostTable.status = participant.status;
+                std::cout << "Got a sleep status packet from " << participant.ipAddress << ": " << received_data._payload << std::endl;
             }
             else
+            {
                 hostTable.status = ASLEEP;
+                std::cout << "Didn't get a sleep status packet from " << hostTable.ipAddress << std::endl;
+            }
 
             sleep(MONITOR_INTERVAL);
         }
@@ -70,6 +74,8 @@ void *monitoring::client (Station* station)
             {
                 if (client_data.type == SLEEP_STATUS_REQUEST)
                 {
+                    std::cout << "Got a sleep status request from " << client_data.station.ipAddress << ": " << client_data._payload << std::endl;
+
                     struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "AWAKEN");
                     data.station = station->serialize();
 
