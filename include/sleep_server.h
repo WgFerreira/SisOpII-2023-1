@@ -44,6 +44,7 @@ public:
     std::string hostname;
 
     void init(std::string arg);
+    void printStation();
     struct station_serial serialize();
     static Station deserialize(struct station_serial serialized);
     struct sockaddr_in getSocketAddress();

@@ -66,6 +66,13 @@ void Station::init(std::string type)
     this->findMacAddress();
 }
 
+void Station::printStation()
+{
+    std::cout << this->hostname << std::endl;
+    std::cout << this->interface << " " << this->macAddress << std::endl;
+    std::cout << this->ipAddress << std::endl << std::endl;
+}
+
 void Station::findInterfaceName()
 {
     struct ifaddrs *addrs;
@@ -156,6 +163,7 @@ int open_socket()
         
     struct timeval timeout;
     timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
     int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (ret < 0)
         std::cout << "ERROR option timeout" << std::endl;

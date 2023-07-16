@@ -19,16 +19,16 @@ void *discovery::server (Station* station)
 
     while (station->status != EXITING)
     {
-        struct sockaddr_in *client_addr;
+        struct sockaddr_in client_addr;
         struct packet client_data;
         socklen_t client_addr_len = sizeof(struct sockaddr_in);
 
-        int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) client_addr, &client_addr_len);
+        int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
         if (n > 0)
         {
             if (client_data.type == SLEEP_SERVICE_DISCOVERY)
             {
-                inet_ntop(AF_INET, &(client_addr->sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
+                inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
 
                 // if (participant.status == AWAKEN) Add to host Table
                 // if (participant.status == EXITING) Remove from host table
