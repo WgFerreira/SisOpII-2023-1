@@ -12,97 +12,75 @@
 
 void *monitoring::server (Station* station) 
 {
-    int sockfd;
+    int sockfd = open_socket();
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-        std::cout << "ERROR opening socket : monitor" << std::endl;
-    
-    struct sockaddr_in addr, recv_addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    memset(&(addr.sin_zero), 0, 8);
-
-    while (true) 
+    while (station->status != EXITING) 
     {
         if (hostTable.ipAddress.length() > 0) 
         {
-            addr.sin_addr.s_addr = inet_addr(hostTable.ipAddress.c_str());
+            struct sockaddr_in sock_addr = hostTable.getSocketAddress();
         
-            struct packet buffer;
-            buffer.type = SLEEP_STATUS_REQUEST;
-            buffer.seqn = 0;
-            buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::system_clock::now().time_since_epoch() ).count();
-            char* payload = "sleep status request\0";
-            buffer.length = strnlen(payload, 255);
-            strncpy((char *) buffer._payload, payload, buffer.length);
+            struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "sleep status request");
+            data.station = hostTable.serialize();
 
-            socklen_t length = sizeof(struct sockaddr_in);
-            int n = sendto(sockfd, &buffer, sizeof(buffer), 0, (struct sockaddr *) &addr, length);
+            int n = sendto(sockfd, &data, sizeof(data), 0, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
             if (n < 0)
                 std::cout << "ERROR sendto : monitor" << std::endl;
             
-            struct packet recv_data;
-            n = recvfrom(sockfd, &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &recv_addr, &length);
-            if (n < 0)
-                std::cout << "ERROR recvfrom : monitor" << std::endl;
-            
-            if (recv_data.type = SLEEP_STATUS_REQUEST)
+            struct packet received_data;
+            struct sockaddr_in server_addr;
+            socklen_t server_addr_len = sizeof(struct sockaddr_in);
+
+            int size = recv_retry(sockfd, &received_data, sizeof(struct packet), &server_addr, &server_addr_len);
+            if (size > 0)
             {
-                std::cout << "Station status: " << recv_data.station.macAddress << recv_data._payload << std::endl;
+                Station participant = Station::deserialize(received_data.station);
+                hostTable.status = participant.status;
             }
+            else
+                hostTable.status = ASLEEP;
 
-            sleep(10);
+            sleep(MONITOR_INTERVAL);
         }
-
     }
     
     close(sockfd);
+    return 0;
 }
 
-void *monitoring::client (Station* station) {
-    int sockfd;
+void *monitoring::client (Station* station) 
+{
+    int sockfd = open_socket();
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-        std::cerr << "ERROR opening socket : monitor" << std::endl;
+    struct sockaddr_in sock_addr = any_address(); 
 
-    struct sockaddr_in recv_addr, send_addr;
-    recv_addr.sin_family = AF_INET;
-    recv_addr.sin_port = htons(PORT);
-    recv_addr.sin_addr.s_addr = INADDR_ANY;
-    memset(&(recv_addr.sin_zero), 0, 8);
-
-    if (bind(sockfd, (struct sockaddr *) &recv_addr, sizeof(struct sockaddr)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
         std::cerr << "ERROR on binding : monitor" << std::endl;
 
-    struct packet recv_data;
-    socklen_t send_addr_len = sizeof(struct sockaddr_in);
-
-    while(true)
+    while(station->status != EXITING)
     {
-        int n = recvfrom(sockfd, &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &send_addr, &send_addr_len);
-        if (n < 0)
-            std::cerr << "ERROR on recvfrom : monitor" << std::endl;
-
-        if (recv_data.type == SLEEP_STATUS_REQUEST)
+        if (station->getManager() != NULL)
         {
-            struct packet send_data;
-            send_data.type = SLEEP_STATUS_REQUEST;
-            send_data.seqn = 0;
-            send_data.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::system_clock::now().time_since_epoch() ).count();
-            char* payload = "AWAKEN";
-            send_data.length = strnlen(payload, 255);
-            strncpy((char *) send_data._payload, payload, send_data.length);
-            send_data.station = *station;
+            struct sockaddr_in client_addr;
+            struct packet client_data;
+            socklen_t client_addr_len = sizeof(struct sockaddr_in);
+            
+            int size = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
+            if (size > 0)
+            {
+                if (client_data.type == SLEEP_STATUS_REQUEST)
+                {
+                    struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "AWAKEN");
+                    data.station = station->serialize();
 
-            /* send to socket */
-            n = sendto(sockfd, (struct packet *) &send_data, sizeof(send_data), 0,(struct sockaddr *) &send_addr, send_addr_len);
-            if (n  < 0) 
-                std::cerr << "ERROR on sendto : monitor" << std::endl;
+                    int n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
+                    if (n  < 0) 
+                        std::cerr << "ERROR on sendto : monitor" << std::endl;
+                }
+            }
         }
-
-        
     }
+
     close(sockfd);
+    return 0;
 }

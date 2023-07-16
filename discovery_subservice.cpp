@@ -8,102 +8,132 @@
 #include "include/discovery_subservice.h"
 #include "include/sleep_server.h"
 
-void *discovery::server (Station* station) {
-    int sockfd;
+void *discovery::server (Station* station) 
+{
+    int sockfd = open_socket();
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
-        std::cerr << "ERROR opening socket : discovery" << std::endl;
+    struct sockaddr_in sock_addr = any_address(); 
 
-    struct sockaddr_in addr, recv;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = INADDR_ANY;
-    memset(&(addr.sin_zero), 0, 8);    
-
-    if (bind(sockfd, (struct sockaddr *) &addr, sizeof(struct sockaddr)) < 0) 
+    if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
         std::cerr << "ERROR on binding : discovery" << std::endl;
 
-    struct packet recv_data;
-    socklen_t clilen = sizeof(struct sockaddr_in);
-
-    while (true)
+    while (station->status != EXITING)
     {
-        int n = recvfrom(sockfd, (struct packet *) &recv_data, sizeof(struct packet), 0, (struct sockaddr *) &recv, &clilen);
-        if (n < 0) 
-            std::cerr << "ERROR on recvfrom : discovery" << std::endl;
-            
-        char ip_address[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(recv.sin_addr), ip_address, INET_ADDRSTRLEN);
-        std::cout << "Received a datagram from " << ip_address << ": " << recv_data._payload << std::endl;
-        std::cout << recv_data.station.hostname << " " << recv_data.station.macAddress << std::endl;
+        struct sockaddr_in *client_addr;
+        struct packet client_data;
+        socklen_t client_addr_len = sizeof(struct sockaddr_in);
 
-        hostTable.hostName = recv_data.station.hostname;
-        hostTable.ipAddress = ip_address;
-        hostTable.macAddress = recv_data.station.macAddress;
-        hostTable.status = AWAKEN;
-        
-        struct packet buffer;
-        buffer.type = SLEEP_SERVICE_DISCOVERY;
-        buffer.seqn = 0;
-        buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch() ).count();
-        char* payload = "I'm the leader\0";
-        buffer.length = strnlen(payload, 255);
-        strncpy((char*) buffer._payload, payload, buffer.length);
-        buffer.station = *station;
+        int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) client_addr, &client_addr_len);
+        if (n > 0)
+        {
+            if (client_data.type == SLEEP_SERVICE_DISCOVERY)
+            {
+                inet_ntop(AF_INET, &(client_addr->sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
 
-        /* send to socket */
-        n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0,(struct sockaddr *) &recv, clilen);
-        if (n  < 0) 
-            std::cerr << "ERROR on sendto : discovery" << std::endl;
+                // if (participant.status == AWAKEN) Add to host Table
+                // if (participant.status == EXITING) Remove from host table
+                Station participant = Station::deserialize(client_data.station);
+                hostTable = participant;
+
+                std::cout << "Received a datagram from " << participant.ipAddress << ": " << client_data._payload << std::endl;
+                std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+
+                struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
+                data.station = station->serialize();
+
+                n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
+                if (n  < 0) 
+                    std::cerr << "ERROR on sendto : discovery" << std::endl;
+            }
+        }
     }
 
-    close(sockfd);
+    struct sockaddr_in broadcast = broadcast_address();
+    
+    struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
+    data.station = station->serialize();
+    
+    int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &broadcast, sizeof(struct sockaddr_in));
+    if (n < 0) 
+        std::cout << "ERROR sendto exit : discovery" << std::endl;
 
+    close(sockfd);
     return 0;
 }
 
-void *discovery::client (Station* station) {
-    int sockfd;
+void *discovery::client (Station* station) 
+{
+    int sockfd = open_socket();
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-        std::cout << "ERROR opening socket : discovery" << std::endl;
+    while (station->status != EXITING)
+    {
+        /* Se não tem Manager envia um sleep discovery em broadcast */
+        if (station->getManager() == NULL)
+        {
+            struct sockaddr_in sock_addr = broadcast_address();
 
-    int broadcastEnable=1;
-    int ret=setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
-    if (ret < 0)
-        std::cout << "ERROR option broadcast : discovery" << std::endl;
-    
-    struct sockaddr_in addr, recv;
-    addr.sin_family = AF_INET;     
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = INADDR_BROADCAST;
-    memset(&(addr.sin_zero), 0, 8);
+            struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "sleep service discovery");
+            data.station = station->serialize();
+            
+            int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
+            if (n < 0) 
+                std::cout << "ERROR sendto : discovery" << std::endl;
 
-    struct packet buffer;
-    buffer.type = SLEEP_SERVICE_DISCOVERY;
-    buffer.seqn = 0;
-    buffer.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now().time_since_epoch() ).count();
-    char* payload = "sleep service discovery\0";
-    buffer.length = strnlen(payload, 255);
-    strncpy((char*) buffer._payload, payload, buffer.length);
-    buffer.station = *station;
+            struct packet received_data;
+            struct sockaddr_in server_addr;
+            socklen_t server_addr_len = sizeof(struct sockaddr_in);
 
-    int n = sendto(sockfd, (struct packet *) &buffer, sizeof(buffer), 0, (const struct sockaddr *) &addr, sizeof(struct sockaddr_in));
-    if (n < 0) 
-        std::cout << "ERROR sendto : discovery" << std::endl;
+            int size = recv_retry(sockfd, &received_data, sizeof(struct packet), &server_addr, &server_addr_len);
+            if (size > 0 )
+            {
+                /* Se for um pacote de descoberta, é a resposta do manager */
+                if (received_data.type == SLEEP_SERVICE_DISCOVERY)
+                {
+                    inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
+                    
+                    Station manager = Station::deserialize(received_data.station);
+                    station->setManager(&manager);
+                }
+            }
+        }
         
-    socklen_t length = sizeof(struct sockaddr_in);
-    n = recvfrom(sockfd, (struct packet *) &buffer, sizeof(buffer), 0, (struct sockaddr *) &recv, &length);
-    if (n < 0)
-        std::cout << "ERROR recvfrom : discovery" << std::endl;
-
-    std::cout << "Got an ack: " << buffer._payload << std::endl;
-    std::cout << buffer.station.hostname << " " << buffer.station.macAddress << std::endl;
+        if (station->getManager() != NULL)
+        {
+            struct packet received_data;
+            struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
+            socklen_t sender_addr_len = sizeof(struct sockaddr_in);
+            
+            int n = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &sender_addr_len);
+            if (n > 0) 
+            {
+                /* Se for um pacote de descoberta, é a resposta do manager */
+                if (received_data.type == SLEEP_SERVICE_DISCOVERY)
+                {
+                    inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
+                    
+                    Station manager = Station::deserialize(received_data.station);
+                    station->setManager(&manager);
+                }
+                /* Se for um pacote de exiting, não tem mais manager */
+                else if (received_data.type == SLEEP_SERVICE_EXITING)
+                    station->setManager(NULL);
+            }
+        }
+    }
     
-    close(sockfd);
+    if (station->getManager() == NULL)
+    {
+        struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
+        
+        struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
+        data.station = station->serialize();
+        
+        int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
+        if (n < 0) 
+            std::cout << "ERROR sendto exit : discovery" << std::endl;
+    }
 
+    close(sockfd);
     return 0;
 }
 

@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <ifaddrs.h>
+#include <arpa/inet.h>
 
 // Subservices
 #include "include/discovery_subservice.h"
@@ -19,24 +20,19 @@
 // Constants
 #define TKN_MANAGER "manager"
 
-struct station_entry hostTable;
+Station hostTable;
 
 int main(int argc, const char *argv[]) {
     std::cout << "Initiating Sleep Server" << std::endl;
 
-    auto *station = new Station();
+    std::string arg = "";
     if (argv[1] != NULL)
-        station->init(argv[1]);
+        arg = argv[1];
 
-    gethostname(station->hostname, HOST_NAME_MAX);
-    if (station->type == StationType::MANAGER)
-        std::cout << "MANAGER Station " << station->hostname << std::endl;
-    else
-        std::cout << "PARTICIPANT Station " << station->hostname << std::endl;
+    auto *station = new Station();
+    station->init(arg);
 
-    station->extractMacAddress();
-
-    if (station->type == MANAGER)
+    if (station->getType() == MANAGER)
     {
         auto th_discovery = std::async(&discovery::server, station);
         auto th_monitor = std::async(&monitoring::server, station);
@@ -55,18 +51,23 @@ int main(int argc, const char *argv[]) {
     return 0;
 }
 
-void Station::init(std::string arg)
+void Station::init(std::string type)
 {
-    if (arg == TKN_MANAGER)
+    if (type == TKN_MANAGER)
         this->type = StationType::MANAGER;
     else
         this->type = StationType::PARTICIPANT;
+
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+    this->hostname = hostname;
+
+    this->findInterfaceName();
+    this->findMacAddress();
 }
 
-void Station::extractMacAddress() 
+void Station::findInterfaceName()
 {
-    std::string interface_name = "eth0";
-
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next) 
@@ -75,27 +76,125 @@ void Station::extractMacAddress()
         {
             if (strncmp("en", addr->ifa_name, 2) == 0 || strncmp("eth", addr->ifa_name, 3) == 0)
             {
-                interface_name = addr->ifa_name;
+                this->interface = addr->ifa_name;
                 break;
             }
         }
     }
     freeifaddrs(addrs);
+} 
 
+void Station::findMacAddress() 
+{
 	struct ifreq ifr;
-	
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 
 	ifr.ifr_addr.sa_family = AF_INET;
-	strncpy((char *)ifr.ifr_name, interface_name.c_str(), IFNAMSIZ-1);
+	strncpy((char *)ifr.ifr_name, this->interface.c_str(), IFNAMSIZ-1);
 
 	ioctl(fd, SIOCGIFHWADDR, &ifr);
 
 	close(fd);
 	
 	unsigned char* mac = (unsigned char *)ifr.ifr_addr.sa_data;
-	
-	sprintf(this->macAddress, (const char *)"%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-    std::cout << "Interface Name: " << interface_name << "\tMAC Address: " << this->macAddress << std::endl;
+    char macAddress[18];
+	sprintf(macAddress, (const char *)"%02x:%02x:%02x:%02x:%02x:%02x",
+            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    this->macAddress = macAddress;
+}
+
+struct station_serial Station::serialize()
+{
+    struct station_serial serialized;
+
+    serialized.status = this->status;
+    strncmp(serialized.hostname, this->hostname.c_str(), HOST_NAME_MAX);
+    strncmp(serialized.ipAddress, this->ipAddress.c_str(), INET_ADDRSTRLEN);
+    strncmp(serialized.macAddress, this->macAddress.c_str(), MAC_ADDRESS_MAX);
+
+    return serialized;
+}
+
+Station Station::deserialize(struct station_serial serialized)
+{
+    Station s;
+    s.status = serialized.status;
+    s.hostname = serialized.hostname;
+    s.ipAddress = serialized.ipAddress;
+    s.macAddress = serialized.macAddress;
+    return s;
+}
+
+struct sockaddr_in Station::getSocketAddress()
+{
+    struct sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_port = htons(PORT);
+    address.sin_addr.s_addr = inet_addr(this->ipAddress.c_str());
+    memset(&(address.sin_zero), 0, 8);
+    return address;
+}
+
+struct packet create_packet(PacketType type, short sequence, char* payload)
+{
+    struct packet packet;
+    packet.type = type;
+    packet.seqn = sequence;
+    packet.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch() ).count();
+    packet.length = strnlen(payload, 255);
+    strncpy((char*) packet._payload, payload, packet.length);
+    return packet;
+}
+
+int open_socket()
+{
+    int sockfd;
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+        std::cerr << "ERROR opening socket" << std::endl;
+        
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    if (ret < 0)
+        std::cout << "ERROR option timeout" << std::endl;
+        
+    int broadcastEnable=1;
+    ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+    if (ret < 0)
+        std::cout << "ERROR option broadcast" << std::endl;
+
+    return sockfd;
+}
+
+struct sockaddr_in any_address()
+{
+    struct sockaddr_in address;
+    address.sin_family = AF_INET;     
+    address.sin_port = htons(PORT);
+    address.sin_addr.s_addr = INADDR_ANY;
+    memset(&(address.sin_zero), 0, 8);
+    return address;
+}
+
+struct sockaddr_in broadcast_address()
+{
+    struct sockaddr_in address;
+    address.sin_family = AF_INET;     
+    address.sin_port = htons(PORT);
+    address.sin_addr.s_addr = INADDR_BROADCAST;
+    memset(&(address.sin_zero), 0, 8);
+    return address;
+}
+
+int recv_retry(int sockfd, void *buffer, size_t buffer_size, 
+        struct sockaddr_in *addr, socklen_t *addr_len)
+{
+    int size = recvfrom(sockfd, buffer, buffer_size, 0, 
+            (struct sockaddr *) addr, addr_len);
+    if (size < 0)
+        size = recvfrom(sockfd, buffer, buffer_size, 0, 
+                (struct sockaddr *) addr, addr_len);
+    return size;
 }

@@ -3,10 +3,13 @@
 
 #include <string>
 #include <limits.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #define PORT 5555
-#define DISCOVERY_PORT 5555
-#define MONITOR_PORT 5556
+#define MAC_ADDRESS_MAX 18
+
+#define MONITOR_INTERVAL 10
 
 enum StationType : uint8_t 
 {
@@ -14,37 +17,60 @@ enum StationType : uint8_t
     PARTICIPANT
 };
 
-class Station 
-{
-public:
-    StationType type = PARTICIPANT;
-    char macAddress[18];
-    char hostname[HOST_NAME_MAX];
-
-    void init(std::string arg);
-    void extractMacAddress();
-};
-
 enum StationStatus : uint8_t 
 {
     AWAKEN,
-    ASLEEP
+    ASLEEP,
+    EXITING
 };
 
-struct station_entry 
+/**
+ * Representa a estação atual
+*/
+class Station 
 {
-    std::string hostName;
-    std::string ipAddress;
+private:
+    Station *manager;
+    StationType type = PARTICIPANT;
+    std::string interface = "eth0";
+
+    void findInterfaceName();
+    void findMacAddress();
+    
+public:
+    StationStatus status = AWAKEN;
     std::string macAddress;
+    std::string ipAddress;
+    std::string hostname;
+
+    void init(std::string arg);
+    struct station_serial serialize();
+    static Station deserialize(struct station_serial serialized);
+    struct sockaddr_in getSocketAddress();
+
+    Station* getManager() { return this->manager; }
+    void setManager(Station* manager) { this->manager = manager; }
+    StationType getType() { return this->type; }
+};
+
+/**
+ * Struct para enviar no pacote
+*/
+struct station_serial
+{
+    char hostname[HOST_NAME_MAX];
+    char ipAddress[INET_ADDRSTRLEN];
+    char macAddress[MAC_ADDRESS_MAX];
     StationStatus status;
 };
 
-extern struct station_entry hostTable;
+extern Station hostTable;
 
 enum PacketType: uint16_t 
 {
     SLEEP_SERVICE_DISCOVERY,
-    SLEEP_STATUS_REQUEST
+    SLEEP_STATUS_REQUEST,
+    SLEEP_SERVICE_EXITING
 };
 
 struct packet 
@@ -53,8 +79,16 @@ struct packet
     uint16_t seqn; //Número de sequência
     uint16_t length; //Comprimento do payload
     uint64_t timestamp; // Timestamp do dado
-    Station station;
+    station_serial station;
     char _payload[255]; //Dados da mensagem
 };
+
+struct packet create_packet(PacketType type, short sequence, char* payload);
+
+int open_socket();
+struct sockaddr_in any_address();
+struct sockaddr_in broadcast_address();
+int recv_retry(int sockfd, void *buffer, size_t buffer_size, 
+        struct sockaddr_in *addr, socklen_t *addr_len);
 
 #endif
