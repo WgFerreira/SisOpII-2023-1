@@ -68,9 +68,9 @@ void Station::init(std::string type)
 
 void Station::printStation()
 {
-    std::cout << this->hostname << std::endl;
-    std::cout << this->interface << " " << this->macAddress << std::endl;
-    std::cout << this->ipAddress << std::endl << std::endl;
+    std::cout << "Hostname: " << this->hostname << std::endl;
+    std::cout << "MAC Address: " << this->macAddress << std::endl;
+    std::cout << "IP Address: " << this->ipAddress << std::endl << std::endl;
 }
 
 void Station::findInterfaceName()
@@ -116,9 +116,9 @@ struct station_serial Station::serialize()
     struct station_serial serialized;
 
     serialized.status = this->status;
-    strncmp(serialized.hostname, this->hostname.c_str(), HOST_NAME_MAX);
-    strncmp(serialized.ipAddress, this->ipAddress.c_str(), INET_ADDRSTRLEN);
-    strncmp(serialized.macAddress, this->macAddress.c_str(), MAC_ADDRESS_MAX);
+    strncpy(serialized.hostname, this->hostname.c_str(), HOST_NAME_MAX);
+    strncpy(serialized.ipAddress, this->ipAddress.c_str(), INET_ADDRSTRLEN);
+    strncpy(serialized.macAddress, this->macAddress.c_str(), MAC_ADDRESS_MAX);
 
     return serialized;
 }
