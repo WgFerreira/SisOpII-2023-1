@@ -33,7 +33,10 @@ void *discovery::server (Station* station)
                 // if (participant.status == AWAKEN) Add to host Table
                 // if (participant.status == EXITING) Remove from host table
                 Station participant = Station::deserialize(client_data.station);
+                
+                smphSignalManagToDiscoveryHostTable.acquire();
                 hostTable = participant;
+                smphSignalDiscoveryToManagHostTable.release();
 
                 std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
                 std::cout << participant.hostname << " " << participant.macAddress << std::endl;
@@ -92,7 +95,10 @@ void *discovery::client (Station* station)
                     inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
                     
                     Station manager = Station::deserialize(received_data.station);
+                    
+		    smphSignalManagToDiscoverySetManager.acquire();
                     station->setManager(&manager);
+	            smphSignalDiscoveryToManagSetManager.release();
 
                     std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
@@ -114,14 +120,19 @@ void *discovery::client (Station* station)
                     inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
                     
                     Station manager = Station::deserialize(received_data.station);
+                    
+                    smphSignalManagToDiscoverySetManager.acquire();
                     station->setManager(&manager);
+                    smphSignalDiscoveryToManagSetManager.release();
                     
                     std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
                 /* Se for um pacote de exiting, não tem mais manager */
                 else if (received_data.type == SLEEP_SERVICE_EXITING)
                 {
+                    smphSignalManagToDiscoverySetManager.acquire();
                     station->setManager(NULL);
+                    smphSignalDiscoveryToManagSetManager.release();
 
                     std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;
                 }
@@ -146,4 +157,3 @@ void *discovery::client (Station* station)
     close(sockfd);
     return 0;
 }
-

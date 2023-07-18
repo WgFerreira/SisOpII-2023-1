@@ -14,6 +14,8 @@ namespace monitoring {
    * Envia mensagens de sleep status
   */
   void *client (Station* station);
+  
+  void *exit (Station* station);
 
 };
 

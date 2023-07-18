@@ -96,3 +96,28 @@ void *monitoring::client (Station* station)
     close(sockfd);
     return 0;
 }
+
+void *monitoring::exit (Station* station) 
+{
+    int sockfd = open_socket();
+
+    while (station->status != EXITING) 
+    {
+	struct packet client_data;
+	struct sockaddr_in client_addr;
+	socklen_t client_addr_len = sizeof(struct sockaddr_in);
+
+	int size = recv_retry(sockfd, &client_data, sizeof(struct packet), &client_addr, &client_addr_len);
+	//std::cout << client_data._payload << std::endl;
+	if (size > 0)
+	{
+	    if (client_data.type == SLEEP_SERVICE_EXITING) {
+	        std::cout << "Exiting " << client_data.station.ipAddress << ": " << client_data._payload << std::endl;
+	    }
+	}
+
+    }
+    
+    close(sockfd);
+    return 0;
+}

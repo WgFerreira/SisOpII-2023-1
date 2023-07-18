@@ -5,6 +5,8 @@
 #include <limits.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <semaphore>
+#include <list>
 
 #define PORT 5555
 #define MAC_ADDRESS_MAX 18
@@ -91,5 +93,19 @@ struct sockaddr_in any_address();
 struct sockaddr_in broadcast_address();
 int recv_retry(int sockfd, void *buffer, size_t buffer_size, 
         struct sockaddr_in *addr, socklen_t *addr_len);
+
+//extern int semaphore_print;
+extern std::binary_semaphore
+	smphSignalManagToDiscoveryHostTable,
+	smphSignalDiscoveryToManagHostTable,
+	smphSignalManagToMonitoringHostTable,
+	smphSignalMonitoringToManagHostTable, 
+	smphSignalManagToDiscoverySetManager,
+	smphSignalDiscoveryToManagSetManager, 
+	smphSignalManagToPrint, 
+	smphSignalPrintToManag;
+	
+
+extern std::list<Station> list_of_stations;
 
 #endif
