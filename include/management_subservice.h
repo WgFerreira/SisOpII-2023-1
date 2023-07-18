@@ -10,7 +10,7 @@ namespace management {
   */
   void *manageHostTable (Station* station);
   
-  void *update_station_status();
+  //void *update_station_status();
 
 };
 

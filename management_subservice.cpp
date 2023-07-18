@@ -28,7 +28,7 @@ void *management::manageHostTable (Station* station)
 	    smphSignalMonitoringToManagHostTable.acquire();
 	    
 	    
-	    management::update_station_status();
+	    //management::update_station_status();
 	     
     	} else {
     	    smphSignalManagToDiscoverySetManager.release();
@@ -39,7 +39,7 @@ void *management::manageHostTable (Station* station)
     
 }
 
-
+/*
 void *management::update_station_status () 
 {
     list<Station>::iterator it;
@@ -51,3 +51,4 @@ void *management::update_station_status ()
         cout << "Erro to find hostTable" << endl;
     //}
 }
+*/
