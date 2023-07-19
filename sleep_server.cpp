@@ -23,7 +23,7 @@
 #define TKN_MANAGER "manager"
 
 Station hostTable;
-std::list<Station> list_of_stations;
+std::map<std::string, Station> stations_table;
 
 std::binary_semaphore
     smphAccessHostTable{1},

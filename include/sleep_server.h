@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <semaphore>
-#include <list>
+#include <map>
 
 #define PORT 5555
 #define MAC_ADDRESS_MAX 18
@@ -78,7 +78,9 @@ enum ManagerOperation: uint16_t
 struct station_op_data
 {
     ManagerOperation operation;
+    std::string key;
     Station station;
+    StationStatus new_status;
 };
 
 extern struct station_op_data station_buffer;
@@ -118,6 +120,7 @@ struct sockaddr_in broadcast_address();
 
 //extern int semaphore_print;
 extern std::binary_semaphore
+    smphAccessStationBuffer,
     smphAccessHostTable,
 	smphSignalManagToDiscoveryHostTable,
 	smphSignalDiscoveryToManagHostTable,
@@ -129,6 +132,7 @@ extern std::binary_semaphore
 	smphSignalPrintToManag;
 	
 
-extern std::list<Station> list_of_stations;
+extern std::map<std::string,Station> stations_table;
+
 
 #endif

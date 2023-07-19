@@ -16,6 +16,19 @@ void *management::manageHostTable (Station* station)
     {	
     	smphSignalManagToPrint.release();
     	smphSignalPrintToManag.acquire();
+
+        smphAccessHostTable.acquire();
+
+        if (station_buffer.operation == INSERT)
+            stations_table.insert(std::pair<std::string,Station>(station_buffer.key, station_buffer.station));
+        else 
+        if (station_buffer.operation == DELETE)
+            stations_table.erase(station_buffer.key);
+        else 
+        if (station_buffer.operation == UPDATE_STATUS)
+            stations_table[station_buffer.key].status = station_buffer.new_status;
+
+        smphAccessStationBuffer.release();
     
     	if(station->getType() == StationType::MANAGER){
     	    smphSignalManagToDiscoveryHostTable.release();

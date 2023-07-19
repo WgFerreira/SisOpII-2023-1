@@ -31,15 +31,16 @@ void *discovery::server (Station* station)
                 inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
                 Station participant = Station::deserialize(client_data.station);
 
-                smphAccessHostTable.acquire();
+                smphAccessStationBuffer.acquire();
 
                 if (participant.status == AWAKEN)
                     station_buffer.operation = INSERT;
                 else if (participant.status == EXITING)
                     station_buffer.operation = DELETE;
 
+                station_buffer.key = participant.macAddress;
                 station_buffer.station = participant;
-
+                
                 smphAccessHostTable.release();
 
                 if (station->debug)
