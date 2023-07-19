@@ -24,28 +24,35 @@ void *discovery::server (Station* station)
         socklen_t client_addr_len = sizeof(struct sockaddr_in);
 
         int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
-        if (n > 0)
+        if (n > 0 && validate_packet(&client_data, client_data.timestamp))
         {
             if (client_data.type == SLEEP_SERVICE_DISCOVERY)
             {
                 inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
-
-                // if (participant.status == AWAKEN) Add to host Table
-                // if (participant.status == EXITING) Remove from host table
                 Station participant = Station::deserialize(client_data.station);
-                
-                smphSignalManagToDiscoveryHostTable.acquire();
-                hostTable = participant;
-                smphSignalDiscoveryToManagHostTable.release();
 
-                std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
-                std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+                smphAccessHostTable.acquire();
+
+                if (participant.status == AWAKEN)
+                    station_buffer.operation = INSERT;
+                else if (participant.status == EXITING)
+                    station_buffer.operation = DELETE;
+
+                station_buffer.station = participant;
+
+                smphAccessHostTable.release();
+
+                if (station->debug)
+                {
+                    std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
+                    std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+                }
 
                 struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
                 data.station = station->serialize();
 
                 n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
-                if (n  < 0) 
+                if (n < 0) 
                     std::cerr << "ERROR on sendto : discovery" << std::endl;
             }
         }
@@ -85,9 +92,9 @@ void *discovery::client (Station* station)
             struct packet received_data;
             struct sockaddr_in server_addr;
             socklen_t server_addr_len = sizeof(struct sockaddr_in);
-
-            int size = recv_retry(sockfd, &received_data, sizeof(struct packet), &server_addr, &server_addr_len);
-            if (size > 0 )
+          
+            int size = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &server_addr_len);
+            if (size > 0 && validate_packet(&received_data, data.timestamp))
             {
                 /* Se for um pacote de descoberta, é a resposta do manager */
                 if (received_data.type == SLEEP_SERVICE_DISCOVERY)
@@ -96,11 +103,10 @@ void *discovery::client (Station* station)
                     
                     Station manager = Station::deserialize(received_data.station);
                     
-		    smphSignalManagToDiscoverySetManager.acquire();
                     station->setManager(&manager);
-	            smphSignalDiscoveryToManagSetManager.release();
 
-                    std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
+                    if (station->debug)
+                        std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
             }
         }
@@ -112,37 +118,24 @@ void *discovery::client (Station* station)
             socklen_t sender_addr_len = sizeof(struct sockaddr_in);
             
             int n = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &sender_addr_len);
-            if (n > 0) 
+            if (n > 0 && validate_packet(&received_data, received_data.timestamp)) 
             {
-                /* Se for um pacote de descoberta, é a resposta do manager */
-                if (received_data.type == SLEEP_SERVICE_DISCOVERY)
-                {
-                    inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
-                    
-                    Station manager = Station::deserialize(received_data.station);
-                    
-                    smphSignalManagToDiscoverySetManager.acquire();
-                    station->setManager(&manager);
-                    smphSignalDiscoveryToManagSetManager.release();
-                    
-                    std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
-                }
                 /* Se for um pacote de exiting, não tem mais manager */
-                else if (received_data.type == SLEEP_SERVICE_EXITING)
+                if (received_data.type == SLEEP_SERVICE_EXITING)
                 {
-                    smphSignalManagToDiscoverySetManager.acquire();
                     station->setManager(NULL);
-                    smphSignalDiscoveryToManagSetManager.release();
 
-                    std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;
+                    if (station->debug)
+                        std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;
                 }
             }
         }
     }
     
-    std::cout << "Leaving Sleep Service" << std::endl;
+    if (station->debug)
+        std::cout << "Leaving Sleep Service" << std::endl;
     
-    if (station->getManager() == NULL)
+    if (station->getManager() != NULL)
     {
         struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
         

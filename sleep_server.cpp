@@ -26,6 +26,7 @@ Station hostTable;
 std::list<Station> list_of_stations;
 
 std::binary_semaphore
+    smphAccessHostTable{1},
     smphSignalManagToDiscoveryHostTable{0},
     smphSignalDiscoveryToManagHostTable{0},
     smphSignalManagToMonitoringHostTable{0},
@@ -182,6 +183,13 @@ struct packet create_packet(PacketType type, short sequence, char* payload)
     return packet;
 }
 
+bool validate_packet(struct packet *data, int64_t sent_timestamp)
+{
+    int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch() ).count();
+    return (data->timestamp >= sent_timestamp) && (now - data->timestamp <= 30);
+}
+
 int open_socket()
 {
     int sockfd;
@@ -189,7 +197,7 @@ int open_socket()
         std::cerr << "ERROR opening socket" << std::endl;
         
     struct timeval timeout;
-    timeout.tv_sec = 1;
+    timeout.tv_sec = 30;
     timeout.tv_usec = 0;
     int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (ret < 0)
@@ -221,17 +229,6 @@ struct sockaddr_in broadcast_address()
     address.sin_addr.s_addr = INADDR_BROADCAST;
     memset(&(address.sin_zero), 0, 8);
     return address;
-}
-
-int recv_retry(int sockfd, void *buffer, size_t buffer_size, 
-        struct sockaddr_in *addr, socklen_t *addr_len)
-{
-    int size = recvfrom(sockfd, buffer, buffer_size, 0, 
-            (struct sockaddr *) addr, addr_len);
-    if (size < 0)
-        size = recvfrom(sockfd, buffer, buffer_size, 0, 
-                (struct sockaddr *) addr, addr_len);
-    return size;
 }
 
 struct station_serial Station::serialize()

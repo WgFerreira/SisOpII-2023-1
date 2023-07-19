@@ -44,6 +44,7 @@ public:
     std::string macAddress;
     std::string ipAddress;
     std::string hostname;
+    bool debug = false;
 
     void init(std::string arg);
     void printStation();
@@ -67,6 +68,21 @@ struct station_serial
     StationStatus status;
 };
 
+enum ManagerOperation: uint16_t
+{
+    INSERT,
+    UPDATE_STATUS,
+    DELETE
+};
+
+struct station_op_data
+{
+    ManagerOperation operation;
+    Station station;
+};
+
+extern struct station_op_data station_buffer;
+
 extern Station hostTable;
 
 enum PacketType: uint16_t 
@@ -86,16 +102,23 @@ struct packet
     char _payload[255]; //Dados da mensagem
 };
 
+/**
+ * Cria um pacote de dados para ser enviado
+*/
 struct packet create_packet(PacketType type, short sequence, char* payload);
+
+/**
+ * Valida se um pacote venceu
+*/
+bool validate_packet(struct packet *data, int64_t sent_timestamp);
 
 int open_socket();
 struct sockaddr_in any_address();
 struct sockaddr_in broadcast_address();
-int recv_retry(int sockfd, void *buffer, size_t buffer_size, 
-        struct sockaddr_in *addr, socklen_t *addr_len);
 
 //extern int semaphore_print;
 extern std::binary_semaphore
+    smphAccessHostTable,
 	smphSignalManagToDiscoveryHostTable,
 	smphSignalDiscoveryToManagHostTable,
 	smphSignalManagToMonitoringHostTable,
