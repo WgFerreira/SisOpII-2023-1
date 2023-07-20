@@ -15,7 +15,7 @@ namespace discovery {
    * Envia mensagens de descoberta e espera receber informações 
    * sobre a estação líder
   */
-  void *client (Station* station);
+  void *client (Station* station, StationTable* table, struct semaphores *sem);
 
 };
 
