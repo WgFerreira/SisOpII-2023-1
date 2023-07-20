@@ -135,7 +135,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                     sem->mutex_manager.lock();
                     if (station->manager)
                     {
-                        delete station->manager;
+                        //delete station->manager;
                         station->manager = NULL;
                         table->has_update = true;
                     }

@@ -173,7 +173,7 @@ bool validate_packet(struct packet *data, uint64_t sent_timestamp)
 {
     uint64_t now = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::system_clock::now().time_since_epoch() ).count();
-    return (data->timestamp >= sent_timestamp) && (now - data->timestamp <= 30);
+    return (data->timestamp >= sent_timestamp) && (now - data->timestamp <= 1);
 }
 
 int open_socket()
