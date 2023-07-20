@@ -78,7 +78,7 @@ void *interface::printClient (Station* station, StationTable* table, struct sema
 			cout << "--------------------------------------------------------------------------------------------------------------";
 			cout << endl;
 			
-			if (station->has_manager) {
+			if (station->getManager() != NULL) {
 				string status = "";
 				if (station->getManager()->status == AWAKEN)
 					status = "AWAKEN";
