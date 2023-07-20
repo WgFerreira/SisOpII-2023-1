@@ -22,11 +22,11 @@ void *management::manageHostTable (Station* station, StationTable* table, struct
             table->has_update = false;
         }
 
-        if (sem->mutex_write.try_lock())
+        if (table->buffer.operation != NONE)
         {
-
-            if (table->buffer.operation != NONE)
+            if (sem->mutex_write.try_lock())
             {
+
                 table->has_update = true;
                 if (table->buffer.operation == INSERT)
                 {
@@ -45,9 +45,9 @@ void *management::manageHostTable (Station* station, StationTable* table, struct
                         std::chrono::system_clock::now().time_since_epoch() ).count();
                 }
                 table->buffer.operation = NONE;
-            }
 
-            sem->mutex_buffer.unlock();
+                sem->mutex_buffer.unlock();
+            }
         }
     }
     
