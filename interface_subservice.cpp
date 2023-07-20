@@ -137,12 +137,14 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 					cmd << "wakeonlan " << macAddress;
 					system(cmd.str().c_str());
 				}
+				table->has_update = true;
 			}
 		}
 		
 		if (command_values[0].compare("EXIT") == 0)
 		{
 			station->status = EXITING;
+			table->has_update = true;
 		}
 	}
 }
