@@ -52,6 +52,7 @@ void *interface::printServer (Station* station, StationTable* table, struct sema
 				}
 			}
 			
+			table->has_update = false;
 			sem->mutex_read.unlock();
 		}
 	}

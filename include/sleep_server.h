@@ -12,7 +12,7 @@
 #define PORT 5555
 #define MAC_ADDRESS_MAX 18
 
-#define MONITOR_INTERVAL 1
+#define MONITOR_INTERVAL 100
 
 enum StationType : uint8_t 
 {
@@ -90,7 +90,6 @@ struct station_op_data
     std::string key;
     Station station;
     StationStatus new_status;
-    bool ready = false;
 };
 
 struct semaphores
@@ -104,7 +103,7 @@ struct semaphores
 class StationTable
 {
 public:
-    bool has_update = false;
+    bool has_update = true;
     struct station_op_data buffer;
     std::map<std::string,Station> table;
 };

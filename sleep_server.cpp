@@ -183,8 +183,8 @@ int open_socket()
         std::cerr << "ERROR opening socket" << std::endl;
         
     struct timeval timeout;
-    timeout.tv_sec = 30;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 500000;
     int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (ret < 0)
         std::cout << "ERROR option timeout" << std::endl;

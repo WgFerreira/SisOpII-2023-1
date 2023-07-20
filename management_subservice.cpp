@@ -17,31 +17,38 @@ void *management::manageHostTable (Station* station, StationTable* table, struct
         if (table->has_update)
         {
             sem->mutex_read.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             sem->mutex_read.lock();
             table->has_update = false;
         }
 
-        sem->mutex_write.lock();
-
-        if (table->buffer.operation != NONE)
+        if (sem->mutex_write.try_lock())
         {
-            table->has_update = true;
-            if (table->buffer.operation == INSERT)
-                table->table.insert(std::pair<std::string,Station>(table->buffer.key, table->buffer.station));
-            else 
-            if (table->buffer.operation == DELETE)
-                table->table.erase(table->buffer.key);
-            else 
-            if (table->buffer.operation == UPDATE_STATUS)
-            {
-                table->table[table->buffer.key].status = table->buffer.new_status;
-                table->table[table->buffer.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::system_clock::now().time_since_epoch() ).count();
-            }
-            table->buffer.operation = NONE;
-        }
 
-        sem->mutex_buffer.unlock();
+            if (table->buffer.operation != NONE)
+            {
+                table->has_update = true;
+                if (table->buffer.operation == INSERT)
+                {
+                    table->table.insert(std::pair<std::string,Station>(table->buffer.key, table->buffer.station));
+                    table->table[table->buffer.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::system_clock::now().time_since_epoch() ).count();
+                }
+                else 
+                if (table->buffer.operation == DELETE)
+                    table->table.erase(table->buffer.key);
+                else 
+                if (table->buffer.operation == UPDATE_STATUS)
+                {
+                    table->table[table->buffer.key].status = table->buffer.new_status;
+                    table->table[table->buffer.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::system_clock::now().time_since_epoch() ).count();
+                }
+                table->buffer.operation = NONE;
+            }
+
+            sem->mutex_buffer.unlock();
+        }
     }
     
 }

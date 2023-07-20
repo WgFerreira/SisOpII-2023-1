@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <cstring>
 #include <map>
+#include <thread>
 
 #include "include/monitoring_subservice.h"
 #include "include/sleep_server.h"
@@ -69,7 +70,7 @@ void *monitoring::server (Station* station, StationTable* table, struct semaphor
                 }
             }            
         }
-        sleep(MONITOR_INTERVAL);
+        std::this_thread::sleep_for(std::chrono::milliseconds(MONITOR_INTERVAL));
     }
     
     close(sockfd);
