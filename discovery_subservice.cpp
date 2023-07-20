@@ -102,10 +102,10 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                 {
                     inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
                     Station manager = Station::deserialize(received_data.station);
-                    
-                    sem->mutex_buffer.lock();
+                    sem->mutex_manager.lock();
                     station->setManager(&manager);
-                    sem->mutex_write.lock();
+                    table->has_update = true;
+                    sem->mutex_manager.unlock();
 
                     if (station->debug)
                         std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
@@ -125,9 +125,10 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                 /* Se for um pacote de exiting, não tem mais manager */
                 if (received_data.type == SLEEP_SERVICE_EXITING)
                 {
-                    sem->mutex_buffer.lock();
+                    sem->mutex_manager.lock();
                     station->setManager(NULL);
-                    sem->mutex_write.lock();
+                    table->has_update = true;
+                    sem->mutex_manager.unlock();
 
                     if (station->debug)
                         std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;

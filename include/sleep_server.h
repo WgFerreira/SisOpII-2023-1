@@ -104,6 +104,7 @@ struct semaphores
 class StationTable
 {
 public:
+    bool has_update = false;
     struct station_op_data buffer;
     std::map<std::string,Station> table;
 };

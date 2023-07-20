@@ -12,7 +12,8 @@ namespace interface {
    * Apresenta tabela de hosts apara a estação líder, ou informações da
    * estação líder para a estação participante
   */
-  void *print (Station* station, StationTable* table, struct semaphores *sem);
+  void *printServer (Station* station, StationTable* table, struct semaphores *sem);
+  void *printClient (Station* station, StationTable* table, struct semaphores *sem);
 
   /**
    * Espera comando EXIT ou WAKEUP host

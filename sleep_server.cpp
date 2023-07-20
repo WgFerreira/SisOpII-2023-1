@@ -41,7 +41,7 @@ int main(int argc, const char *argv[]) {
         auto th_management = std::thread(&management::manageHostTable, station, stationTable, &sem);
         auto th_discovery = std::thread(&discovery::server, station, stationTable, &sem);
         auto th_monitor = std::thread(&monitoring::server, station, stationTable, &sem);
-        auto th_interface_print = std::thread(&interface::print, station, stationTable, &sem);
+        auto th_interface_print = std::thread(&interface::printServer, station, stationTable, &sem);
         auto th_interface_command = std::thread(&interface::getCommand, station, stationTable, &sem);
         th_management.join();
         th_discovery.join();
@@ -51,9 +51,9 @@ int main(int argc, const char *argv[]) {
     }
     else
     {
-        auto th_discovery = std::thread(&discovery::client, station);
+        auto th_discovery = std::thread(&discovery::client, station, stationTable, &sem);
         auto th_monitor = std::thread(&monitoring::client, station);
-        auto th_interface_print = std::thread(&interface::print, station, stationTable, &sem);
+        auto th_interface_print = std::thread(&interface::printClient, station, stationTable, &sem);
         auto th_interface_command = std::thread(&interface::getCommand, station, stationTable, &sem);
         th_discovery.join();
         th_monitor.join();

@@ -12,14 +12,14 @@
 
 using namespace std;
 
-void *interface::print (Station* station, StationTable* table, struct semaphores *sem) {
+void *interface::printServer (Station* station, StationTable* table, struct semaphores *sem) {
 	const char separator    = ' ';
 	const int nameWidth     = 30;
 
 	while(station->status != EXITING) {
 		sem->mutex_read.lock();
 		
-		system("cls");
+		system("clear");
 
 		cout << endl;
 		cout << endl;
@@ -30,6 +30,65 @@ void *interface::print (Station* station, StationTable* table, struct semaphores
 		cout << endl;
 		cout << "--------------------------------------------------------------------------------------------------------------";
 		cout << endl;
+
+		for (auto &tupla : table->table)
+		{
+			Station s = tupla.second;
+			string status = "";
+			if (s.status == AWAKEN)
+				status = "AWAKEN";
+			else
+				status = "ASLEEP";
+			
+			cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
+			cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
+			cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
+			cout << left << setw(nameWidth) << setfill(separator) << status;
+			cout << endl;
+		}
+		
+		sem->mutex_read.unlock();
+	}
+}
+
+void *interface::printClient (Station* station, StationTable* table, struct semaphores *sem) {
+	const char separator    = ' ';
+	const int nameWidth     = 30;
+
+	while(station->status != EXITING) {
+		
+		if (table->has_update)
+		{
+			sem->mutex_manager.lock();
+			system("clear");
+
+			cout << endl;
+			cout << endl;
+			cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
+			cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
+			cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
+			cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
+			cout << endl;
+			cout << "--------------------------------------------------------------------------------------------------------------";
+			cout << endl;
+			
+			if (station->getManager() != NULL) {
+				string status = "";
+				if (station->getManager()->status == AWAKEN)
+					status = "AWAKEN";
+				else
+					status = "ASLEEP";
+				
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->hostname;
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->macAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->ipAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << status;
+			}
+			cout << endl;
+
+			table->has_update = false;
+			sem->mutex_manager.unlock();
+		}
 
 		if (station->getType() == MANAGER)
 		{
