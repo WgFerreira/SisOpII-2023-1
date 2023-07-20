@@ -36,17 +36,20 @@ void *interface::printServer (Station* station, StationTable* table, struct sema
 			for (auto &tupla : table->table)
 			{
 				Station s = tupla.second;
-				string status = "";
-				if (s.status == AWAKEN)
-					status = "AWAKEN";
-				else
-					status = "ASLEEP";
-				
-				cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
-				cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
-				cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
-				cout << left << setw(nameWidth) << setfill(separator) << status;
-				cout << endl;
+				if (s.hostname.length() > 0)
+				{
+					string status = "";
+					if (s.status == AWAKEN)
+						status = "AWAKEN";
+					else
+						status = "ASLEEP";
+					
+					cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
+					cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
+					cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
+					cout << left << setw(nameWidth) << setfill(separator) << status;
+					cout << endl;
+				}
 			}
 			
 			sem->mutex_read.unlock();

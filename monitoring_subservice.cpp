@@ -100,7 +100,9 @@ void *monitoring::client (Station* station)
                 {
                     char client_ip_addr[INET_ADDRSTRLEN];
                     inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip_addr, INET_ADDRSTRLEN);
-                    std::cout << "Got a sleep status request from " << client_ip_addr << ": " << client_data._payload << std::endl;
+
+                    if (station->debug)
+                        std::cout << "Got a sleep status request from " << client_ip_addr << ": " << client_data._payload << std::endl;
 
                     station->ipAddress = client_data.station.ipAddress;
 
