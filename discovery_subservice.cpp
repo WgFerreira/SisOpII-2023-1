@@ -131,7 +131,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                 if (received_data.type == SLEEP_SERVICE_EXITING)
                 {
                     sem->mutex_manager.lock();
-                    station->setManager(NULL);
+                    delete station->manager;
                     table->has_update = true;
                     sem->mutex_manager.unlock();
 

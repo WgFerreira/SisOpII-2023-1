@@ -33,7 +33,6 @@ enum StationStatus : uint8_t
 class Station 
 {
 private:
-    Station *manager;
     StationType type = PARTICIPANT;
     std::string interface;
 
@@ -42,6 +41,7 @@ private:
     
 public:
     StationStatus status = AWAKEN;
+    Station *manager;
     std::string macAddress;
     std::string ipAddress;
     std::string hostname;
