@@ -51,5 +51,7 @@ void *management::manageHostTable (Station* station, StationTable* table, struct
         }
     }
     
+    if (station->debug)
+        std::cout << "saindo management" << std::endl;
 }
 

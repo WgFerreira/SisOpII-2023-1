@@ -77,6 +77,8 @@ void *monitoring::server (Station* station, StationTable* table, struct semaphor
     }
     
     close(sockfd);
+    if (station->debug)
+        std::cout << "saindo monitor" << std::endl;
     return 0;
 }
 
@@ -122,5 +124,7 @@ void *monitoring::client (Station* station)
     }
 
     close(sockfd);
+    if (station->debug)
+        std::cout << "saindo monitor" << std::endl;
     return 0;
 }

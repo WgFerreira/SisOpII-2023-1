@@ -69,6 +69,8 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
         std::cout << "ERROR sendto exit : discovery" << std::endl;
 
     close(sockfd);
+    if (station->debug)
+        std::cout << "saindo discovery" << std::endl;
     return 0;
 }
 
@@ -162,5 +164,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
     }
 
     close(sockfd);
+    if (station->debug)
+        std::cout << "saindo discovery" << std::endl;
     return 0;
 }

@@ -59,6 +59,8 @@ void *interface::printServer (Station* station, StationTable* table, struct sema
 			sem->mutex_read.unlock();
 		}
 	}
+	if (station->debug)
+		std::cout << "saindo interface" << std::endl;
 }
 
 void *interface::printClient (Station* station, StationTable* table, struct semaphores *sem) {
@@ -100,6 +102,8 @@ void *interface::printClient (Station* station, StationTable* table, struct sema
 			table->has_update = false;
 		}
 	}
+	if (station->debug)
+		std::cout << "saindo interface" << std::endl;
 }
 
 
@@ -141,14 +145,15 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 					cmd << "wakeonlan " << macAddress;
 					system(cmd.str().c_str());
 				}
-				table->has_update = true;
 			}
 		}
 		
 		if (command_values[0].compare("EXIT") == 0)
 		{
 			station->status = EXITING;
-			table->has_update = true;
 		}
+		table->has_update = true;
 	}
+	if (station->debug)
+		std::cout << "saindo interface" << std::endl;
 }
