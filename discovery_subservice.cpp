@@ -49,7 +49,7 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
                     std::cout << participant.hostname << " " << participant.macAddress << std::endl;
                 }
 
-                struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
+                struct packet data = create_packet(SLEEP_DISCOVERY_RESPONSE, 0, "I'm the leader");
                 data.station = station->serialize();
 
                 n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
@@ -103,7 +103,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
             if (size > 0 && validate_packet(&received_data, data.timestamp))
             {
                 /* Se for um pacote de descoberta, é a resposta do manager */
-                if (received_data.type == SLEEP_SERVICE_DISCOVERY)
+                if (received_data.type == SLEEP_DISCOVERY_RESPONSE)
                 {
                     inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
                     Station manager = Station::deserialize(received_data.station);
