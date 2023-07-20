@@ -155,5 +155,5 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 		table->has_update = true;
 	}
 	if (station->debug)
-		std::cout << "saindo interface" << std::endl;
+		std::cout << "saindo command" << std::endl;
 }

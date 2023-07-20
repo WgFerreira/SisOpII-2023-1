@@ -9,7 +9,8 @@
 #include <mutex>
 #include <map>
 
-#define PORT 5555
+#define DISCOVERY_PORT 5555
+#define MONITOR_PORT 5556
 #define MAC_ADDRESS_MAX 18
 
 #define MONITOR_INTERVAL 100
@@ -58,7 +59,7 @@ public:
     void printStation();
     struct station_serial serialize();
     static Station deserialize(struct station_serial serialized);
-    struct sockaddr_in getSocketAddress();
+    struct sockaddr_in getSocketAddress(int port);
 
     Station* getManager() { return this->manager; }
     void setManager(Station* manager) { this->manager = manager; }
@@ -137,8 +138,8 @@ struct packet create_packet(PacketType type, short sequence, char* payload);
 bool validate_packet(struct packet *data, uint64_t sent_timestamp);
 
 int open_socket();
-struct sockaddr_in any_address();
-struct sockaddr_in broadcast_address();
+struct sockaddr_in any_address(int port);
+struct sockaddr_in broadcast_address(int port);
 
 
 #endif

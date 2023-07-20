@@ -25,7 +25,7 @@ void *monitoring::server (Station* station, StationTable* table, struct semaphor
                 std::chrono::system_clock::now().time_since_epoch() ).count();
             if (now - participant.last_update > 5 && participant.ipAddress.length() > 0) 
             {
-                struct sockaddr_in sock_addr = participant.getSocketAddress();
+                struct sockaddr_in sock_addr = participant.getSocketAddress(MONITOR_PORT);
                 
                 struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "sleep status request");
                 data.station = participant.serialize();
@@ -86,7 +86,7 @@ void *monitoring::client (Station* station)
 {
     int sockfd = open_socket();
 
-    struct sockaddr_in sock_addr = any_address(); 
+    struct sockaddr_in sock_addr = any_address(MONITOR_PORT); 
 
     if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
         std::cerr << "ERROR on binding : monitor" << std::endl;

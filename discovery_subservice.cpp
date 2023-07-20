@@ -12,7 +12,7 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
 {
     int sockfd = open_socket();
 
-    struct sockaddr_in sock_addr = any_address(); 
+    struct sockaddr_in sock_addr = any_address(DISCOVERY_PORT); 
 
     if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
         std::cerr << "ERROR on binding : discovery" << std::endl;
@@ -59,7 +59,7 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
         }
     }
 
-    struct sockaddr_in broadcast = broadcast_address();
+    struct sockaddr_in broadcast = broadcast_address(DISCOVERY_PORT);
     
     struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
     data.station = station->serialize();
@@ -78,7 +78,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
 {
     int sockfd = open_socket();
     
-    struct sockaddr_in sock_addr = any_address(); 
+    struct sockaddr_in sock_addr = any_address(DISCOVERY_PORT); 
 
     if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
         std::cerr << "ERROR on binding : discovery" << std::endl;
@@ -88,7 +88,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
         /* Se não tem Manager envia um sleep discovery em broadcast */
         if (station->getManager() == NULL)
         {
-            struct sockaddr_in sock_addr = broadcast_address();
+            struct sockaddr_in sock_addr = broadcast_address(DISCOVERY_PORT);
 
             struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "sleep service discovery");
             data.station = station->serialize();
@@ -123,7 +123,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
         if (station->getManager() != NULL)
         {
             struct packet received_data;
-            struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
+            struct sockaddr_in server_addr = station->getManager()->getSocketAddress(DISCOVERY_PORT);
             socklen_t sender_addr_len = sizeof(struct sockaddr_in);
             
             int n = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &sender_addr_len);
@@ -153,7 +153,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
     
     if (station->getManager() != NULL)
     {
-        struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
+        struct sockaddr_in server_addr = station->getManager()->getSocketAddress(DISCOVERY_PORT);
         
         struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
         data.station = station->serialize();

@@ -147,11 +147,11 @@ Station Station::deserialize(struct station_serial serialized)
     return s;
 }
 
-struct sockaddr_in Station::getSocketAddress()
+struct sockaddr_in Station::getSocketAddress(int port)
 {
     struct sockaddr_in address;
     address.sin_family = AF_INET;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
     address.sin_addr.s_addr = inet_addr(this->ipAddress.c_str());
     memset(&(address.sin_zero), 0, 8);
     return address;
@@ -197,21 +197,21 @@ int open_socket()
     return sockfd;
 }
 
-struct sockaddr_in any_address()
+struct sockaddr_in any_address(int port)
 {
     struct sockaddr_in address;
     address.sin_family = AF_INET;     
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
     address.sin_addr.s_addr = INADDR_ANY;
     memset(&(address.sin_zero), 0, 8);
     return address;
 }
 
-struct sockaddr_in broadcast_address()
+struct sockaddr_in broadcast_address(int port)
 {
     struct sockaddr_in address;
     address.sin_family = AF_INET;     
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
     address.sin_addr.s_addr = INADDR_BROADCAST;
     memset(&(address.sin_zero), 0, 8);
     return address;
