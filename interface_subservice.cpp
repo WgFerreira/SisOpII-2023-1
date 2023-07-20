@@ -91,9 +91,9 @@ void *interface::printClient (Station* station, StationTable* table, struct sema
 					else
 						status = "ASLEEP";
 					
-					cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->hostname;
-					cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->macAddress;
-					cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->ipAddress;
+					cout << left << setw(nameWidth) << setfill(separator) << station->manager->hostname;
+					cout << left << setw(nameWidth) << setfill(separator) << station->manager->macAddress;
+					cout << left << setw(nameWidth) << setfill(separator) << station->manager->ipAddress;
 					cout << left << setw(nameWidth) << setfill(separator) << status;
 				}
 				cout << endl;

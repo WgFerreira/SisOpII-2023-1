@@ -115,7 +115,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                     sem->mutex_manager.unlock();
 
                     if (station->debug)
-                        std::cout << "Got an ack discovery packet from " << manager.ipAddress << ": " << received_data._payload << std::endl;
+                        std::cout << "Got an ack discovery packet from " << manager.macAddress << " " << manager.ipAddress << ": " << received_data._payload << std::endl;
                 }
             }
         }
