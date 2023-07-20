@@ -88,7 +88,7 @@ void *monitoring::client (Station* station)
 
     while(station->status != EXITING)
     {
-        if (station->getManager() != NULL)
+        if (station->has_manager)
         {
             struct sockaddr_in client_addr;
             struct packet client_data;
