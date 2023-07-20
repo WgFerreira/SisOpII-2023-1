@@ -141,9 +141,9 @@ Station Station::deserialize(struct station_serial serialized)
 {
     Station s;
     s.status = serialized.status;
-    s.hostname = serialized.hostname;
-    s.ipAddress = serialized.ipAddress;
-    s.macAddress = serialized.macAddress;
+    s.hostname = std::string(serialized.hostname);
+    s.ipAddress = std::string(serialized.ipAddress);
+    s.macAddress = std::string(serialized.macAddress);
     return s;
 }
 
