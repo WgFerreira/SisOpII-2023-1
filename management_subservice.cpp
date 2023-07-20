@@ -33,7 +33,11 @@ void *management::manageHostTable (Station* station, StationTable* table, struct
                 table->table.erase(table->buffer.key);
             else 
             if (table->buffer.operation == UPDATE_STATUS)
+            {
                 table->table[table->buffer.key].status = table->buffer.new_status;
+                table->table[table->buffer.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch() ).count();
+            }
             table->buffer.operation = NONE;
         }
 
