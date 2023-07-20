@@ -81,7 +81,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
     while (station->status != EXITING)
     {
         /* Se não tem Manager envia um sleep discovery em broadcast */
-        if (!station->has_manager)
+        if (station->getManager() == NULL)
         {
             struct sockaddr_in sock_addr = broadcast_address();
 
@@ -106,7 +106,6 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                     Station manager = Station::deserialize(received_data.station);
                     sem->mutex_manager.lock();
                     station->setManager(&manager);
-                    station->has_manager = true;
                     table->has_update = true;
                     sem->mutex_manager.unlock();
 
@@ -116,7 +115,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
             }
         }
         
-        if (station->has_manager)
+        if (station->getManager() != NULL)
         {
             struct packet received_data;
             struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
@@ -130,7 +129,6 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
                 {
                     sem->mutex_manager.lock();
                     station->setManager(NULL);
-                    station->has_manager = false;
                     table->has_update = true;
                     sem->mutex_manager.unlock();
 
@@ -144,7 +142,7 @@ void *discovery::client (Station* station, StationTable* table, struct semaphore
     if (station->debug)
         std::cout << "Leaving Sleep Service" << std::endl;
     
-    if (station->has_manager)
+    if (station->getManager() != NULL)
     {
         struct sockaddr_in server_addr = station->getManager()->getSocketAddress();
         

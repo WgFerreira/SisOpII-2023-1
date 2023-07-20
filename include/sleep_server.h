@@ -41,7 +41,6 @@ private:
     void findMacAddress();
     
 public:
-    bool has_manager = false;
     StationStatus status = AWAKEN;
     std::string macAddress;
     std::string ipAddress;
