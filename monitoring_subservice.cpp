@@ -43,17 +43,20 @@ void *monitoring::server (Station* station, StationTable* table, struct semaphor
                     && validate_packet(&received_data, data.timestamp) 
                     && received_data.station.macAddress == participant.macAddress)
                 {
-                    sem->mutex_buffer.lock();
+                    if (received_data.type == SLEEP_STATUS_REQUEST)
+                    {
+                        sem->mutex_buffer.lock();
 
-                    table->buffer.operation = UPDATE_STATUS;
-                    table->buffer.station = participant;
-                    table->buffer.key = participant.macAddress;
-                    table->buffer.new_status = AWAKEN;
+                        table->buffer.operation = UPDATE_STATUS;
+                        table->buffer.station = participant;
+                        table->buffer.key = participant.macAddress;
+                        table->buffer.new_status = AWAKEN;
 
-                    sem->mutex_write.unlock();
+                        sem->mutex_write.unlock();
 
-                    if (station->debug)
-                        std::cout << "Got a sleep status packet from " << participant.ipAddress << ": " << received_data._payload << std::endl;
+                        if (station->debug)
+                            std::cout << "Got a sleep status packet from " << participant.ipAddress << ": " << received_data._payload << std::endl;
+                    }
                 }
                 else
                 {

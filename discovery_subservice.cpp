@@ -29,30 +29,33 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
             inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
             Station participant = Station::deserialize(client_data.station);
 
-            sem->mutex_buffer.lock();
-
-            if (client_data.type == SLEEP_SERVICE_DISCOVERY)
-                table->buffer.operation = INSERT;
-            else if (client_data.type == SLEEP_SERVICE_EXITING)
-                table->buffer.operation = DELETE;
-
-            table->buffer.key = participant.macAddress;
-            table->buffer.station = participant;
-            
-            sem->mutex_write.unlock();
-
-            if (station->debug)
+            if (client_data.type == SLEEP_SERVICE_DISCOVERY || client_data.type == SLEEP_SERVICE_EXITING)
             {
-                std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
-                std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+                sem->mutex_buffer.lock();
+
+                if (client_data.type == SLEEP_SERVICE_DISCOVERY)
+                    table->buffer.operation = INSERT;
+                else if (client_data.type == SLEEP_SERVICE_EXITING)
+                    table->buffer.operation = DELETE;
+
+                table->buffer.key = participant.macAddress;
+                table->buffer.station = participant;
+                
+                sem->mutex_write.unlock();
+
+                if (station->debug)
+                {
+                    std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
+                    std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+                }
+
+                struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
+                data.station = station->serialize();
+
+                n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
+                if (n < 0) 
+                    std::cerr << "ERROR on sendto : discovery" << std::endl;
             }
-
-            struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "I'm the leader");
-            data.station = station->serialize();
-
-            n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
-            if (n < 0) 
-                std::cerr << "ERROR on sendto : discovery" << std::endl;
         }
     }
 
