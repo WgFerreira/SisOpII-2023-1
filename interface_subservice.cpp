@@ -17,7 +17,8 @@ void *interface::printServer (Station* station, StationTable* table, struct sema
 	const int nameWidth     = 30;
 
 	while(station->status != EXITING) {
-		sem->mutex_read.lock();
+		while (!table->has_update)
+			sem->mutex_read.lock();
 		
 		system("clear");
 
