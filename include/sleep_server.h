@@ -6,12 +6,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <semaphore>
+#include <mutex>
 #include <map>
 
 #define PORT 5555
 #define MAC_ADDRESS_MAX 18
 
-#define MONITOR_INTERVAL 10
+#define MONITOR_INTERVAL 1
 
 enum StationType : uint8_t 
 {
@@ -34,7 +35,7 @@ class Station
 private:
     Station *manager;
     StationType type = PARTICIPANT;
-    std::string interface = "eth0";
+    std::string interface;
 
     void findInterfaceName();
     void findMacAddress();
@@ -44,7 +45,14 @@ public:
     std::string macAddress;
     std::string ipAddress;
     std::string hostname;
+    uint64_t last_update;
     bool debug = false;
+
+    Station()
+    {   // pega o time_t atual
+        this->last_update = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch() ).count();
+    }
 
     void init(std::string arg);
     void printStation();
@@ -72,7 +80,8 @@ enum ManagerOperation: uint16_t
 {
     INSERT,
     UPDATE_STATUS,
-    DELETE
+    DELETE,
+    NONE
 };
 
 struct station_op_data
@@ -81,11 +90,23 @@ struct station_op_data
     std::string key;
     Station station;
     StationStatus new_status;
+    bool ready = false;
 };
 
-extern struct station_op_data station_buffer;
+struct semaphores
+{
+    std::mutex mutex_manager;
+    std::mutex mutex_buffer;
+    std::mutex mutex_write;
+    std::mutex mutex_read;
+};
 
-extern Station hostTable;
+class StationTable
+{
+public:
+    struct station_op_data buffer;
+    std::map<std::string,Station> table;
+};
 
 enum PacketType: uint16_t 
 {
@@ -100,7 +121,7 @@ struct packet
     uint16_t seqn; //Número de sequência
     uint16_t length; //Comprimento do payload
     uint64_t timestamp; // Timestamp do dado
-    station_serial station;
+    struct station_serial station;
     char _payload[255]; //Dados da mensagem
 };
 
@@ -112,27 +133,11 @@ struct packet create_packet(PacketType type, short sequence, char* payload);
 /**
  * Valida se um pacote venceu
 */
-bool validate_packet(struct packet *data, int64_t sent_timestamp);
+bool validate_packet(struct packet *data, uint64_t sent_timestamp);
 
 int open_socket();
 struct sockaddr_in any_address();
 struct sockaddr_in broadcast_address();
-
-//extern int semaphore_print;
-extern std::binary_semaphore
-    smphAccessStationBuffer,
-    smphAccessHostTable,
-	smphSignalManagToDiscoveryHostTable,
-	smphSignalDiscoveryToManagHostTable,
-	smphSignalManagToMonitoringHostTable,
-	smphSignalMonitoringToManagHostTable, 
-	smphSignalManagToDiscoverySetManager,
-	smphSignalDiscoveryToManagSetManager, 
-	smphSignalManagToPrint, 
-	smphSignalPrintToManag;
-	
-
-extern std::map<std::string,Station> stations_table;
 
 
 #endif

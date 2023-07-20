@@ -8,14 +8,12 @@ namespace monitoring {
   /**
    * Recebe mensagens de sleep status e atualiza a tabela de hosts
   */
-  void *server (Station* station);
+  void *server (Station* station, StationTable* table, struct semaphores *sem);
 
   /**
    * Envia mensagens de sleep status
   */
   void *client (Station* station);
-  
-  void *exit (Station* station);
 
 };
 

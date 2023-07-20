@@ -12,101 +12,109 @@
 
 using namespace std;
 
-void *interface::print (Station* station) {
-    const char separator    = ' ';
-    const int nameWidth     = 30;
+void *interface::print (Station* station, StationTable* table, struct semaphores *sem) {
+	const char separator    = ' ';
+	const int nameWidth     = 30;
 
-    while(station->status != EXITING) {
-    	smphSignalManagToPrint.acquire();
-    	
-    	cout << endl;
-    	cout << endl;
-    	cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
-    	cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
-    	cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
-    	cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
-    	cout << endl;
-    	cout << "--------------------------------------------------------------------------------------------------------------";
-    	cout << endl;
-    
-    	if (station->getType() == StationType::MANAGER) {
-    	
-    	    list<Station>::iterator it;
-	    for (it = list_of_stations.begin(); it != list_of_stations.end(); ++it) {
-	    
-	        string status = "";
-	        if (it->status == AWAKEN)
-	            status = "AWAKEN";
-	        else
-	            status = "ASLEEP";
-	        
-    	        cout << left << setw(nameWidth) << setfill(separator) << it->hostname;
-    	        cout << left << setw(nameWidth) << setfill(separator) << it->macAddress;
-    	        cout << left << setw(nameWidth) << setfill(separator) << it->ipAddress;
-	        cout << left << setw(nameWidth) << setfill(separator) << status;
-    	        cout << endl;
-    	    
-    	    }
-    
-    	} else {
-    
-    	    if (station->getManager() != NULL) {
-    	        string status = "";
-	        if (station->getManager()->status == AWAKEN)
-	            status = "AWAKEN";
-	        else
-	            status = "ASLEEP";
-    	    
-    	        cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->hostname;
-    	        cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->macAddress;
-    	        cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->ipAddress;
-	        cout << left << setw(nameWidth) << setfill(separator) << status;
-	    
-	    }
-    	    cout << endl;
-    
-       	}
-       	
-        smphSignalPrintToManag.release();
-    }
+	while(station->status != EXITING) {
+		sem->mutex_read.lock();
+		
+		system("cls");
+
+		cout << endl;
+		cout << endl;
+		cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
+		cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
+		cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
+		cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
+		cout << endl;
+		cout << "--------------------------------------------------------------------------------------------------------------";
+		cout << endl;
+
+		if (station->getType() == MANAGER)
+		{
+			for (auto &tupla : table->table)
+			{
+				Station s = tupla.second;
+				string status = "";
+				if (s.status == AWAKEN)
+					status = "AWAKEN";
+				else
+					status = "ASLEEP";
+				
+				cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
+				cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << status;
+				cout << endl;
+			}
+		}
+		else
+		{
+			if (station->getManager() != NULL) {
+				string status = "";
+				if (station->getManager()->status == AWAKEN)
+					status = "AWAKEN";
+				else
+					status = "ASLEEP";
+				
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->hostname;
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->macAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << station->getManager()->ipAddress;
+				cout << left << setw(nameWidth) << setfill(separator) << status;
+			}
+			cout << endl;
+		}
+		
+		sem->mutex_read.unlock();
+	}
 }
 
 
-void *interface::getCommand (Station* station) {
-    string command_values[5];
-    
-    while(station->status != EXITING) {
-        string command;
-        getline(cin, command);
-        
-        stringstream ss(command);
-        string word;
-        
-        int pointer = 0;
-        while (ss >> word) {
-            command_values[pointer] = word;
-            pointer++;
-        }
-        
-        if (station->getType() == StationType::MANAGER) {
-            if (command_values[0].compare("wakeup") == 0) {
-                interface::wakeonlan(command_values[1]);
-                command_values[1] = "\0";
-            }
-        } else {
-            if (command_values[0].compare("EXIT") == 0) {
-                interface::exit_service(station);
-            }
-        }
-    }
-}
+void *interface::getCommand (Station* station, StationTable* table, struct semaphores *sem) {
+	string command_values[5];
+	
+	while(station->status != EXITING) {
+		string command;
+		getline(cin, command);
+		
+		stringstream ss(command);
+		string word;
+		
+		int pointer = 0;
+		while (ss >> word) {
+			command_values[pointer] = word;
+			pointer++;
+		}
+		
+		if (station->getType() == StationType::MANAGER) 
+		{
+			if (command_values[0].compare("wakeup") == 0) 
+			{
+				string macAddress = "";
+				sem->mutex_read.lock();
+				for (auto &tupla : table->table)
+				{
+					if (tupla.second.hostname.compare(command_values[1]))
+					{
+						macAddress = tupla.second.macAddress;
+						break;
+					}
+				}
+				sem->mutex_read.unlock();
 
-
-void *interface::wakeonlan(string mac_address) {
-    cout << "WAKEONLAN COMMAND " << mac_address << endl;
-}
-
-
-void *interface::exit_service(Station* station) {
-    station->status = EXITING;
+				if (macAddress.size() > 0)
+				{
+					stringstream cmd;
+					cmd << "wakeonlan " << macAddress;
+					system(cmd.str().c_str());
+				}
+			}
+		}
+		
+		if (command_values[0].compare("EXIT") == 0)
+		{
+			station->status = EXITING;
+		}
+	}
 }

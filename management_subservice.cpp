@@ -10,58 +10,36 @@
 
 using namespace std;
 
-void *management::manageHostTable (Station* station) 
+void *management::manageHostTable (Station* station, StationTable* table, struct semaphores *sem) 
 {
+    bool has_update = false;
     while(station->status != EXITING) 
     {	
-    	smphSignalManagToPrint.release();
-    	smphSignalPrintToManag.acquire();
+        if (has_update)
+        {
+            sem->mutex_read.unlock();
+            sem->mutex_read.lock();
+            has_update = false;
+        }
 
-        smphAccessHostTable.acquire();
+        sem->mutex_write.lock();
 
-        if (station_buffer.operation == INSERT)
-            stations_table.insert(std::pair<std::string,Station>(station_buffer.key, station_buffer.station));
-        else 
-        if (station_buffer.operation == DELETE)
-            stations_table.erase(station_buffer.key);
-        else 
-        if (station_buffer.operation == UPDATE_STATUS)
-            stations_table[station_buffer.key].status = station_buffer.new_status;
+        if (table->buffer.operation != NONE)
+        {
+            has_update = true;
+            if (table->buffer.operation == INSERT)
+                table->table.insert(std::pair<std::string,Station>(table->buffer.key, table->buffer.station));
+            else 
+            if (table->buffer.operation == DELETE)
+                table->table.erase(table->buffer.key);
+            else 
+            if (table->buffer.operation == UPDATE_STATUS)
+                table->table[table->buffer.key].status = table->buffer.new_status;
+            table->buffer.operation = NONE;
+        }
 
-        smphAccessStationBuffer.release();
-    
-    	if(station->getType() == StationType::MANAGER){
-    	    smphSignalManagToDiscoveryHostTable.release();
-    	    smphSignalDiscoveryToManagHostTable.acquire();
-    	    
-    	    list_of_stations.push_back(hostTable);
-    	    
-    	    
-	    smphSignalManagToMonitoringHostTable.release();
-	    smphSignalMonitoringToManagHostTable.acquire();
-	    
-	    
-	    //management::update_station_status();
-	     
-    	} else {
-    	    smphSignalManagToDiscoverySetManager.release();
-    	    smphSignalDiscoveryToManagSetManager.acquire();
-    	}
-    
+        sem->mutex_buffer.unlock();
     }
     
 }
 
-/*
-void *management::update_station_status () 
-{
-    list<Station>::iterator it;
-    it = std::find(list_of_stations.begin(), list_of_stations.end(), hostTable);
-    
-    //if (it != list_of_stations.end()) {
-    //    it->status = hostTable.status;
-    //} else {
-        cout << "Erro to find hostTable" << endl;
-    //}
-}
-*/

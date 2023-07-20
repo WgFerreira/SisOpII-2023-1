@@ -9,7 +9,7 @@ namespace discovery {
    * Recebe mensagens de descoberta e responde com informações da 
    * estação líder. Adiciona e exclui linhas na tabela de hosts
   */
-  void *server (Station* station);
+  void *server (Station* station, StationTable* table, struct semaphores *sem);
 
   /**
    * Envia mensagens de descoberta e espera receber informações 

@@ -12,22 +12,12 @@ namespace interface {
    * Apresenta tabela de hosts apara a estação líder, ou informações da
    * estação líder para a estação participante
   */
-  void *print (Station* station);
+  void *print (Station* station, StationTable* table, struct semaphores *sem);
 
   /**
    * Espera comando EXIT ou WAKEUP host
   */
-  void *getCommand (Station* station);
-  
-  /**
-    * Envia pacote mágico WakeOnLan para um computador
-  */
-  void *wakeonlan (std::string mac_address);
-  
-  /**
-    * Informa ao MANAGER que está saindo do serviço e encerra a execeução do mesmo
-  */
-  void *exit_service(Station* station);
+  void *getCommand (Station* station, StationTable* table, struct semaphores *sem);
 
 };
 

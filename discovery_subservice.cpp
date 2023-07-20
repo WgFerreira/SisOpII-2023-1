@@ -8,7 +8,7 @@
 #include "include/discovery_subservice.h"
 #include "include/sleep_server.h"
 
-void *discovery::server (Station* station) 
+void *discovery::server (Station* station, StationTable* table, struct semaphores *sem) 
 {
     int sockfd = open_socket();
 
@@ -31,17 +31,17 @@ void *discovery::server (Station* station)
                 inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
                 Station participant = Station::deserialize(client_data.station);
 
-                smphAccessStationBuffer.acquire();
+                sem->mutex_buffer.lock();
 
                 if (participant.status == AWAKEN)
-                    station_buffer.operation = INSERT;
+                    table->buffer.operation = INSERT;
                 else if (participant.status == EXITING)
-                    station_buffer.operation = DELETE;
+                    table->buffer.operation = DELETE;
 
-                station_buffer.key = participant.macAddress;
-                station_buffer.station = participant;
+                table->buffer.key = participant.macAddress;
+                table->buffer.station = participant;
                 
-                smphAccessHostTable.release();
+                sem->mutex_write.unlock();
 
                 if (station->debug)
                 {
@@ -101,7 +101,6 @@ void *discovery::client (Station* station)
                 if (received_data.type == SLEEP_SERVICE_DISCOVERY)
                 {
                     inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
-                    
                     Station manager = Station::deserialize(received_data.station);
                     
                     station->setManager(&manager);
