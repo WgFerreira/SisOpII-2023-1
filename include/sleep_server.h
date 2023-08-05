@@ -9,8 +9,6 @@
 #include <mutex>
 #include <map>
 
-#define DISCOVERY_PORT 5555
-#define MONITOR_PORT 5556
 #define MAC_ADDRESS_MAX 18
 
 #define MONITOR_INTERVAL 100
@@ -108,38 +106,6 @@ public:
     struct station_op_data buffer;
     std::map<std::string,Station> table;
 };
-
-enum PacketType: uint16_t 
-{
-    SLEEP_SERVICE_DISCOVERY,
-    SLEEP_DISCOVERY_RESPONSE,
-    SLEEP_STATUS_REQUEST,
-    SLEEP_SERVICE_EXITING
-};
-
-struct packet 
-{
-    PacketType type; //Tipo do pacote (p.ex. DATA | CMD)
-    uint16_t seqn; //Número de sequência
-    uint16_t length; //Comprimento do payload
-    uint64_t timestamp; // Timestamp do dado
-    struct station_serial station;
-    char _payload[255]; //Dados da mensagem
-};
-
-/**
- * Cria um pacote de dados para ser enviado
-*/
-struct packet create_packet(PacketType type, short sequence, char* payload);
-
-/**
- * Valida se um pacote venceu
-*/
-bool validate_packet(struct packet *data, uint64_t sent_timestamp);
-
-int open_socket();
-struct sockaddr_in any_address(int port);
-struct sockaddr_in broadcast_address(int port);
 
 
 #endif
