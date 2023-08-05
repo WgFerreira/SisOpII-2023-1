@@ -75,37 +75,5 @@ struct station_serial
     StationStatus status;
 };
 
-enum ManagerOperation: uint16_t
-{
-    INSERT,
-    UPDATE_STATUS,
-    DELETE,
-    NONE
-};
-
-struct station_op_data
-{
-    ManagerOperation operation;
-    std::string key;
-    Station station;
-    StationStatus new_status;
-};
-
-struct semaphores
-{
-    std::mutex mutex_manager;
-    std::mutex mutex_buffer;
-    std::mutex mutex_write;
-    std::mutex mutex_read;
-};
-
-class StationTable
-{
-public:
-    bool has_update = true;
-    struct station_op_data buffer;
-    std::map<std::string,Station> table;
-};
-
 
 #endif
