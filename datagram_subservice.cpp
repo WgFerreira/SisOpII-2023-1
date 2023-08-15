@@ -9,7 +9,7 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
 {
   int sockfd = datagram::open_socket();
 
-  while (station->status != EXITING)
+  while (station->status != EXITING || !datagram_queue->sending_queue.empty())
   {
     if (!datagram_queue->sending_queue.empty() && datagram_queue->mutex_sending.try_lock())
     {
@@ -26,6 +26,8 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
       datagram_queue->mutex_sending.unlock();
     }
   }
+  
+  close(sockfd);
 }
 
 void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
@@ -70,6 +72,8 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
       }
     }
   }
+
+  close(sockfd);
 }
 
 struct packet datagram::create_packet(MessageType type, short sequence, 

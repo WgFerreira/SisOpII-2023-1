@@ -37,6 +37,10 @@ namespace management {
     std::list<struct station_op_data> manage_queue;
   };
 
+  /**
+   * Realiza as operações na tabela de estações
+   * 
+  */
   void *manage(Station* station, ManagementQueue *queue, StationTable *table);
 
 };

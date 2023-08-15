@@ -8,15 +8,10 @@
 #include "include/discovery_subservice.h"
 #include "include/sleep_server.h"
 
-void *discovery::server (Station* station, StationTable* table, struct semaphores *sem) 
+using namespace datagram;
+
+void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue)
 {
-    int sockfd = open_socket();
-
-    struct sockaddr_in sock_addr = any_address(DISCOVERY_PORT); 
-
-    if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
-        std::cerr << "ERROR on binding : discovery" << std::endl;
-
     while (station->status != EXITING)
     {
         struct sockaddr_in client_addr;
@@ -59,16 +54,16 @@ void *discovery::server (Station* station, StationTable* table, struct semaphore
         }
     }
 
-    struct sockaddr_in broadcast = broadcast_address(DISCOVERY_PORT);
-    
-    struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
-    data.station = station->serialize();
-    
-    int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &broadcast, sizeof(struct sockaddr_in));
-    if (n < 0) 
-        std::cout << "ERROR sendto exit : discovery" << std::endl;
+    struct message exit_msg;
+    exit_msg.address = INADDR_BROADCAST;
+    exit_msg.sequence = 0;
+    exit_msg.type = LEAVING;
+    exit_msg.payload = station;
 
-    close(sockfd);
+    datagram_queue->mutex_sending.lock();
+    datagram_queue->sending_queue.push_back(exit_msg);
+    datagram_queue->mutex_sending.unlock();
+
     if (station->debug)
         std::cout << "saindo discovery" << std::endl;
     return 0;

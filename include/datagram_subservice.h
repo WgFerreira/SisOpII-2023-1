@@ -37,7 +37,7 @@ namespace datagram {
   {
     in_addr_t address;
     MessageType type;
-    Station payload;
+    Station *payload;
     short sequence;
   };
 
@@ -63,7 +63,14 @@ namespace datagram {
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);
 
+  /**
+   * Thread que envia mensagens UDP na rede 
+  */
   void *sender(Station *station, DatagramQueue *datagram_queue);
+
+  /**
+   * Thread que recebe mensagens UDP da rede 
+  */
   void *receiver(Station *station, DatagramQueue *datagram_queue);
 }
 
