@@ -39,6 +39,7 @@ private:
     void findMacAddress();
     
 public:
+  pid_t pid;
     StationStatus status = AWAKEN;
     Station *manager;
     std::string macAddress;

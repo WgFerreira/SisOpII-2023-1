@@ -65,12 +65,21 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
 
 struct management::station_table_serial &StationTable::serialize()
 {
-  unsigned long size = this->table.size();
-  struct management::station_table_serial serialized[ceil(100.0)];
+  unsigned long count = this->table.size();
+  unsigned long size = (int)ceil(count/100);
 
-  serialized.clock = this->clock;
-  serialized.count = this->table.size();
-  serialized.table = new (struct station_serial[serialized.count]);
+  struct management::station_table_serial serialized[size];
+
+  for (int i = 0; i < size; i++)
+  {
+    struct management::station_table_serial t;
+
+    t.clock = this->clock;
+    t.count = this->table.size();
+    t.table = new (struct station_serial[t.count]);
+  }
+  
+
 
   return serialized;
 }
