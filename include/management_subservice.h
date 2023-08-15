@@ -1,6 +1,7 @@
 #ifndef _MANAGEMENT_H
 #define _MANAGEMENT_H
 
+#include "datagram_subservice.h"
 #include "sleep_server.h"
 
 namespace management {
@@ -24,10 +25,29 @@ namespace management {
   class StationTable
   {
   public:
+    unsigned long clock;
     std::mutex mutex_write;
     std::mutex mutex_read;
     bool has_update;
     std::map<std::string,Station> table;
+
+    StationTable()
+    {   
+        this->clock = 0;
+    }
+
+    struct station_table_serial &serialize();
+    void deserialize(StationTable *table, struct station_table_serial serialized);
+  };
+
+  /**
+   * Struct para enviar no pacote
+  */
+  struct station_table_serial
+  {
+    unsigned long clock;
+    unsigned int count;
+    struct station_serial table[100];
   };
 
   class ManagementQueue
@@ -41,7 +61,7 @@ namespace management {
    * Realiza as operações na tabela de estações
    * 
   */
-  void *manage(Station* station, ManagementQueue *queue, StationTable *table);
+  void *manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *dgram_queue);
 
 };
 

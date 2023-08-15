@@ -4,11 +4,13 @@
 #include <semaphore>
 #include <iterator>
 #include <list>
+#include <cmath>
 
 #include "include/management_subservice.h"
 #include "include/sleep_server.h"
 
 using namespace std;
+using namespace management;
 
 void *management::manage(Station* station, ManagementQueue *queue, StationTable *table) 
 {
@@ -31,6 +33,7 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
         queue->mutex_manage.unlock();
 
         table->has_update = true;
+        table->clock += 1;
         switch (op_data.operation)
         {
         case INSERT:
@@ -51,10 +54,37 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
         
         table->mutex_write.unlock();
       }
+      queue->mutex_manage.unlock();
     }
   }
   
   if (station->debug)
     std::cout << "saindo management" << std::endl;
 }
+
+
+struct management::station_table_serial &StationTable::serialize()
+{
+  unsigned long size = this->table.size();
+  struct management::station_table_serial serialized[ceil(100.0)];
+
+  serialized.clock = this->clock;
+  serialized.count = this->table.size();
+  serialized.table = new (struct station_serial[serialized.count]);
+
+  return serialized;
+}
+
+void StationTable::deserialize(StationTable *table, station_table_serial serialized)
+{
+  table->clock = serialized.clock;
+  table->table.clear();
+  for (unsigned int i = 0; i < serialized.count; i++)
+  {
+    auto station = Station::deserialize(serialized.table[i]);
+
+    table->table.insert(std::pair<std::string,Station>(station.macAddress, station));
+  }
+}
+
 
