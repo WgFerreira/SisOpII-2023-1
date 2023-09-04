@@ -14,67 +14,55 @@
 
 // Subservices
 #include "include/discovery_subservice.h"
-#include "include/monitoring_subservice.h"
+// #include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
 #include "include/sleep_server.h"
 
 // Constants
 #define TKN_MANAGER "manager"
+#define TKN_DEBUG "debug"
 
 int main(int argc, const char *argv[]) {
     std::cout << "Initiating Sleep Server" << std::endl;
 
-    std::string arg = "";
-    if (argv[1] != NULL)
-        arg = argv[1];
-
     auto *station = new Station();
-    station->init(arg);
-
-    auto *stationTable = new StationTable();
-
-    struct semaphores sem;
-
-    if (station->getType() == MANAGER)
-    {
-        auto th_management = std::thread(&management::manageHostTable, station, stationTable, &sem);
-        auto th_discovery = std::thread(&discovery::server, station, stationTable, &sem);
-        auto th_monitor = std::thread(&monitoring::server, station, stationTable, &sem);
-        auto th_interface_print = std::thread(&interface::printServer, station, stationTable, &sem);
-        auto th_interface_command = std::thread(&interface::getCommand, station, stationTable, &sem);
-        th_management.join();
-        th_discovery.join();
-        th_monitor.join();
-        th_interface_print.join();
-        th_interface_command.join();
-    }
-    else
-    {
-        auto th_discovery = std::thread(&discovery::client, station, stationTable, &sem);
-        auto th_monitor = std::thread(&monitoring::client, station);
-        auto th_interface_print = std::thread(&interface::printClient, station, stationTable, &sem);
-        auto th_interface_command = std::thread(&interface::getCommand, station, stationTable, &sem);
-        th_discovery.join();
-        th_monitor.join();
-        th_interface_print.join();
-        th_interface_command.join();
+    station->init();
+    if (argc >= 2) {
+        std::string arg = argv[1];
+        if (arg == TKN_DEBUG)
+            station->debug = true;
     }
 
+    auto *stationTable = new management::StationTable();
+
+    auto *datagram = new datagram::DatagramQueue();
+    auto *management = new management::ManagementQueue();
+
+    auto th_sender = std::thread(&datagram::sender, station, datagram);
+    auto th_receiver = std::thread(&datagram::sender, station, datagram);
+    auto th_discovery = std::thread(&discovery::discovery, station, datagram, management, stationTable);
+    auto th_management = std::thread(&management::manage, station, management, stationTable);
+    auto th_interface = std::thread(&interface::interface, station, stationTable);
+    auto th_command = std::thread(&interface::command, station, stationTable);
+
+    th_sender.join();
+    th_receiver.join();
+    th_discovery.join();
+    th_management.join();
+    th_interface.join();
+    th_command.join();
 
     return 0;
 }
 
-void Station::init(std::string type)
+void Station::init()
 {
-    if (type == TKN_MANAGER)
-        this->type = StationType::MANAGER;
-    else
-        this->type = StationType::PARTICIPANT;
-
     char hostname[HOST_NAME_MAX];
     gethostname(hostname, HOST_NAME_MAX);
     this->hostname = hostname;
+
+    this->pid = getpid();
 
     this->findInterfaceName();
     this->findMacAddress();
@@ -82,6 +70,7 @@ void Station::init(std::string type)
 
 void Station::printStation()
 {
+    std::cout << "Pid: " << this->pid << std::endl;
     std::cout << "Hostname: " << this->hostname << std::endl;
     std::cout << "MAC Address: " << this->macAddress << std::endl;
     std::cout << "IP Address: " << this->ipAddress << std::endl << std::endl;
@@ -119,7 +108,7 @@ void Station::findMacAddress()
 	
 	unsigned char* mac = (unsigned char *)ifr.ifr_addr.sa_data;
 
-    char macAddress[18];
+    char macAddress[MAC_ADDRESS_MAX];
 	sprintf(macAddress, (const char *)"%02x:%02x:%02x:%02x:%02x:%02x",
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     this->macAddress = macAddress;
@@ -129,6 +118,8 @@ struct station_serial Station::serialize()
 {
     struct station_serial serialized;
 
+    serialized.pid = this->pid;
+    serialized.type = this->type;
     serialized.status = this->status;
     strncpy(serialized.hostname, this->hostname.c_str(), HOST_NAME_MAX);
     strncpy(serialized.ipAddress, this->ipAddress.c_str(), INET_ADDRSTRLEN);
@@ -140,6 +131,8 @@ struct station_serial Station::serialize()
 Station Station::deserialize(struct station_serial serialized)
 {
     Station s;
+    s.pid = serialized.pid;
+    s.type = serialized.type;
     s.status = serialized.status;
     s.hostname = std::string(serialized.hostname);
     s.ipAddress = std::string(serialized.ipAddress);
@@ -152,7 +145,23 @@ struct sockaddr_in Station::getSocketAddress(int port)
     struct sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
-    address.sin_addr.s_addr = inet_addr(this->ipAddress.c_str());
+    address.sin_addr.s_addr = this->getAddress();
     memset(&(address.sin_zero), 0, 8);
     return address;
+}
+
+in_addr_t Station::getAddress()
+{
+    return inet_addr(this->ipAddress.c_str());
+}
+
+uint64_t now()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+uint64_t millis_since(u_int64_t then)
+{
+    return now() - then;
 }

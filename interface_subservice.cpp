@@ -58,11 +58,16 @@ void *interface::interface (Station* station, management::StationTable* table)
 					}
 				}
 			}
+			else 
+			{
+				station->printStation();
+			}
 			table->mutex_read.unlock();
 		}
 	}
 	if (station->debug)
 		std::cout << "saindo interface" << std::endl;
+	return 0;
 }
 
 void *interface::command (Station* station, management::StationTable* table) 
@@ -87,7 +92,7 @@ void *interface::command (Station* station, management::StationTable* table)
 			if (command_values[0].compare("wakeup") == 0) 
 			{
 				string macAddress = "";
-				table->mutex_read.lock();
+				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
 					if (tupla.second.hostname.compare(command_values[1]))
@@ -96,7 +101,7 @@ void *interface::command (Station* station, management::StationTable* table)
 						break;
 					}
 				}
-				table->mutex_read.unlock();
+				table->mutex_write.unlock();
 
 				if (macAddress.size() > 0)
 				{
@@ -115,4 +120,5 @@ void *interface::command (Station* station, management::StationTable* table)
 	}
 	if (station->debug)
 		std::cout << "saindo command" << std::endl;
+	return 0;
 }

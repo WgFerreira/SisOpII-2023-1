@@ -2,15 +2,18 @@
 #define _MANAGEMENT_H
 
 #include "datagram_subservice.h"
+#include <map>
+#include <list>
+
 #include "sleep_server.h"
 
 namespace management {
   
   enum ManagerOperation: uint16_t
   {
-    INSERT,
-    UPDATE_STATUS,
-    DELETE,
+    INSERT,         /** key, station */
+    UPDATE_STATUS,  /** key, new_status */
+    DELETE,         /** key */
     NONE
   };
 
@@ -38,6 +41,8 @@ namespace management {
 
     struct station_table_serial &serialize();
     void deserialize(StationTable *table, struct station_table_serial serialized);
+    std::list<Station> getValues(unsigned int pid);
+    bool has(std::string key);
   };
 
   /**

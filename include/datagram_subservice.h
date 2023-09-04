@@ -15,8 +15,9 @@ namespace datagram {
     DISCOVERY, 
     MONITORING,
     // Identifica o que a mensagem é
-    DISCOVERY_REQUEST,
-    DISCOVERY_RESPONSE,
+    MANAGER_ELECTION,
+    ELECTION_ANSWER,
+    ELECTION_VICTORY,
     STATUS_REQUEST,
     STATUS_RESPONSE,
     LEAVING
@@ -48,7 +49,7 @@ namespace datagram {
   {
     in_addr_t address;
     MessageType type;
-    Station *payload;
+    Station payload;
     short sequence;
   };
 

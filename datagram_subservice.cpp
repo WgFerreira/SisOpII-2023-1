@@ -28,6 +28,7 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
   }
   
   close(sockfd);
+  return 0;
 }
 
 void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
@@ -74,6 +75,7 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
   }
 
   close(sockfd);
+  return 0;
 }
 
 struct packet datagram::create_packet(MessageType type, short sequence, 

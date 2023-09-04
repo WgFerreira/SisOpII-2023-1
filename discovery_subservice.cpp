@@ -9,47 +9,134 @@
 #include "include/sleep_server.h"
 
 using namespace datagram;
+using namespace management;
 
-void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue)
+void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue, management::StationTable *table)
 {
     while (station->status != EXITING)
     {
-        struct sockaddr_in client_addr;
-        struct packet client_data;
-        socklen_t client_addr_len = sizeof(struct sockaddr_in);
+        /**
+         * Checa se tem manager e inicia a eleição se necessário
+        */
+        bully_algorithm(station, datagram_queue, table);
 
-        int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
-        if (n > 0 && validate_packet(&client_data, client_data.timestamp))
-        {
-            inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
-            Station participant = Station::deserialize(client_data.station);
+        /**
+         * Processa mensagens da fila
+        */
+        if (!datagram_queue->discovery_queue.empty()) {
+            datagram_queue->mutex_discovery.lock();
 
-            if (client_data.type == SLEEP_SERVICE_DISCOVERY || client_data.type == SLEEP_SERVICE_EXITING)
+            struct message msg = datagram_queue->discovery_queue.front();
+            datagram_queue->discovery_queue.pop_front();
+            datagram_queue->mutex_discovery.unlock();
+
+            switch (msg.type)
             {
-                sem->mutex_buffer.lock();
-
-                if (client_data.type == SLEEP_SERVICE_DISCOVERY)
-                    table->buffer.operation = INSERT;
-                else if (client_data.type == SLEEP_SERVICE_EXITING)
-                    table->buffer.operation = DELETE;
-
-                table->buffer.key = participant.macAddress;
-                table->buffer.station = participant;
-                
-                sem->mutex_write.unlock();
-
-                if (station->debug)
+            case MessageType::MANAGER_ELECTION :
+                /**
+                 * Se é o manager, então não houve falha e não é necessário eleger um manager novo
+                 * só responder com vitória
+                */
+                if (station->getType() == MANAGER)
                 {
-                    std::cout << "Received a discovery packet from " << participant.ipAddress << ": " << client_data._payload << std::endl;
-                    std::cout << participant.hostname << " " << participant.macAddress << std::endl;
+                    struct message victory_msg;
+                    victory_msg.address = msg.address;
+                    victory_msg.sequence = 0;
+                    victory_msg.type = ELECTION_VICTORY;
+                    victory_msg.payload = *station;
+
+                    datagram_queue->mutex_sending.lock();
+                    datagram_queue->sending_queue.push_back(victory_msg);
+                    datagram_queue->mutex_sending.unlock();
+                    
+                    /**
+                     * Se o remetente não é conhecido, então é precisa ser adicionada a tabela
+                    */
+                    if (table->has(msg.payload.macAddress))
+                    {
+                        struct management::station_op_data op;
+                        op.operation = INSERT;
+                        op.key = msg.payload.macAddress;
+                        op.station = msg.payload;
+
+                        manage_queue->mutex_manage.lock();
+                        manage_queue->manage_queue.push_back(op);
+                        manage_queue->mutex_manage.unlock();
+                    }
                 }
+                /**
+                 * Se é só um participante, talvez tenha que iniciar uma eleição
+                */
+                else {
+                    /**
+                     * Se o remetente é conhecido, houve uma falha
+                     * continua o processo de eleição 
+                    */
+                    if (table->has(msg.payload.macAddress))
+                    {
+                        station->setManager(NULL);
+                        /**
+                         * Se existem outras estação conhecidas com o pid mais alto, 
+                         * então responde e continua a eleição
+                        */
+                        if (table->getValues(station->getPid()).size() > 0 || station->getPid() > msg.payload.getPid()) 
+                        {
+                            struct message answer_msg;
+                            answer_msg.address = msg.address;
+                            answer_msg.sequence = 0;
+                            answer_msg.type = ELECTION_ANSWER;
+                            answer_msg.payload = *station;
 
-                struct packet data = create_packet(SLEEP_DISCOVERY_RESPONSE, 0, "I'm the leader");
-                data.station = station->serialize();
+                            datagram_queue->mutex_sending.lock();
+                            datagram_queue->sending_queue.push_back(answer_msg);
+                            datagram_queue->mutex_sending.unlock();
+                        }
+                        /**
+                         * Se essa é a estação com pid mais alto, 
+                         * é provavelmente o novo líder
+                        */
+                        else 
+                            election_victory(station, datagram_queue, table);
+                    }
+                }
+                break;
+                
+            case MessageType::ELECTION_ANSWER :
+                station->setType(PARTICIPANT);
+                station->status = WAITING_ELECTION;
+                station->last_leader_search = now();
+                station->leader_search_retries = 0;
+                break;
+                
+            case MessageType::ELECTION_VICTORY :
+                station->setType(PARTICIPANT);
+                station->status = AWAKEN;
+                station->last_leader_search = now();
+                station->leader_search_retries = 0;
+                station->setManager(&msg.payload);
+                break;
 
-                n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
-                if (n < 0) 
-                    std::cerr << "ERROR on sendto : discovery" << std::endl;
+            case MessageType::LEAVING :
+                if (station->getType() == MANAGER)
+                {
+                    if (table->has(msg.payload.macAddress)) 
+                    {
+                        struct management::station_op_data op;
+                        op.operation = DELETE;
+                        op.key = msg.payload.macAddress;
+
+                        manage_queue->mutex_manage.lock();
+                        manage_queue->manage_queue.push_back(op);
+                        manage_queue->mutex_manage.unlock();
+                    }
+                }
+                else 
+                    if (msg.payload.macAddress == station->getManager()->macAddress)
+                        station->setManager(NULL);
+                break;
+            
+            default:
+                break;
             }
         }
     }
@@ -58,7 +145,7 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
     exit_msg.address = INADDR_BROADCAST;
     exit_msg.sequence = 0;
     exit_msg.type = LEAVING;
-    exit_msg.payload = station;
+    exit_msg.payload = *station;
 
     datagram_queue->mutex_sending.lock();
     datagram_queue->sending_queue.push_back(exit_msg);
@@ -69,97 +156,108 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
     return 0;
 }
 
-void *discovery::client (Station* station, StationTable* table, struct semaphores *sem) 
+void discovery::bully_algorithm(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
 {
-    int sockfd = open_socket();
-    
-    struct sockaddr_in sock_addr = any_address(DISCOVERY_PORT); 
+    /**
+     * Se não tem manager, inicia eleição
+    */
+    if (station->getType() != MANAGER && station->getManager() == NULL)
+        station->status = ELECTING;
 
-    if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
-        std::cerr << "ERROR on binding : discovery" << std::endl;
+    /**
+     * Se está em eleição e ainda não tem resposta, tenta de novo 
+     *  ou termina a eleição com vitória
+    */
+    if (station->status == ELECTING && millis_since(station->last_leader_search) > 500)
+        leader_election(station, datagram_queue, table);
 
-    while (station->status != EXITING)
-    {
-        /* Se não tem Manager envia um sleep discovery em broadcast */
-        if (station->getManager() == NULL)
-        {
-            struct sockaddr_in sock_addr = broadcast_address(DISCOVERY_PORT);
-
-            struct packet data = create_packet(SLEEP_SERVICE_DISCOVERY, 0, "sleep service discovery");
-            data.station = station->serialize();
-            
-            int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
-            if (n < 0) 
-                std::cout << "ERROR sendto : discovery" << std::endl;
-
-            struct packet received_data;
-            struct sockaddr_in server_addr;
-            socklen_t server_addr_len = sizeof(struct sockaddr_in);
-          
-            int size = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &server_addr_len);
-            if (size > 0 && validate_packet(&received_data, data.timestamp))
-            {
-                /* Se for um pacote de descoberta, é a resposta do manager */
-                if (received_data.type == SLEEP_DISCOVERY_RESPONSE)
-                {
-                    inet_ntop(AF_INET, &(server_addr.sin_addr), received_data.station.ipAddress, INET_ADDRSTRLEN);
-                    Station manager = Station::deserialize(received_data.station);
-                    sem->mutex_manager.lock();
-                    station->setManager(&manager);
-                    table->has_update = true;
-                    sem->mutex_manager.unlock();
-
-                    if (station->debug)
-                        std::cout << "Got an ack discovery packet from " << manager.macAddress << " " << manager.ipAddress << ": " << received_data._payload << std::endl;
-                }
-            }
-        }
-        
-        if (station->getManager() != NULL)
-        {
-            struct packet received_data;
-            struct sockaddr_in server_addr = station->getManager()->getSocketAddress(DISCOVERY_PORT);
-            socklen_t sender_addr_len = sizeof(struct sockaddr_in);
-            
-            int n = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &sender_addr_len);
-            if (n > 0 && validate_packet(&received_data, received_data.timestamp)) 
-            {
-                /* Se for um pacote de exiting, não tem mais manager */
-                if (received_data.type == SLEEP_SERVICE_EXITING)
-                {
-                    sem->mutex_manager.lock();
-                    if (station->manager)
-                    {
-                        //delete station->manager;
-                        station->manager = NULL;
-                        table->has_update = true;
-                    }
-                    sem->mutex_manager.unlock();
-
-                    if (station->debug)
-                        std::cout << "Got an exit packet from " << received_data.station.ipAddress << ": " << received_data._payload << std::endl;
-                }
-            }
-        }
-    }
-    
-    if (station->debug)
-        std::cout << "Leaving Sleep Service" << std::endl;
-    
-    if (station->getManager() != NULL)
-    {
-        struct sockaddr_in server_addr = station->getManager()->getSocketAddress(DISCOVERY_PORT);
-        
-        struct packet data = create_packet(SLEEP_SERVICE_EXITING, 0, "Bye!");
-        data.station = station->serialize();
-        
-        int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &server_addr, sizeof(struct sockaddr_in));
-        if (n < 0) 
-            std::cout << "ERROR sendto exit : discovery" << std::endl;
-    }
-
-    close(sockfd);
-    if (station->debug)
-        std::cout << "saindo discovery" << std::endl;
-    return 0;
+    /**
+     * Se já perdeu a eleição, mas ainda nao tem resposta, inicia a eleição de novo
+    */
+    if (station->status == WAITING_ELECTION && millis_since(station->last_leader_search) > 500)
+        station->status = ELECTING;
 }
+
+void discovery::leader_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
+{
+    /**
+     * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
+    */
+    if (station->leader_search_retries >= 2)
+    {
+        election_victory(station, datagram_queue, table);
+    } 
+    /**
+     * Pode tentar iniciar uma eleição até 2 vezes seguidas
+    */
+    else {
+        station->setType(CANDIDATE);
+
+        if (table->table.empty()) {
+            struct message election_msg;
+            election_msg.address = INADDR_BROADCAST;
+            election_msg.sequence = 0;
+            election_msg.type = MANAGER_ELECTION;
+            election_msg.payload = *station;
+
+            datagram_queue->mutex_sending.lock();
+            datagram_queue->sending_queue.push_back(election_msg);
+            datagram_queue->mutex_sending.unlock();
+        }
+        else
+            multicast_election(station, datagram_queue, table, MANAGER_ELECTION, true);
+            
+        station->last_leader_search = now();
+        station->leader_search_retries += 1;
+        station->status = ELECTING;
+    }
+}
+
+void discovery::multicast_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table, datagram::MessageType type, bool filter_pid)
+{
+    std::list<struct message> messages;
+
+    table->mutex_write.lock();
+    for (auto &s : table->getValues(filter_pid ? station->getPid() : 0)) {
+        if (s.getAddress() == station->getAddress())
+            continue;
+
+        struct message election_msg;
+        election_msg.address = s.getAddress();
+        election_msg.sequence = 0;
+        election_msg.type = type;
+        election_msg.payload = *station;
+        
+        messages.push_back(election_msg);
+    }
+    table->mutex_write.unlock();
+
+    datagram_queue->mutex_sending.lock();
+    datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
+    datagram_queue->mutex_sending.unlock();
+}
+
+void discovery::election_victory(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
+{
+    station->last_leader_search = now();
+    station->leader_search_retries = 0;
+    station->setType(MANAGER);
+    station->setManager(NULL);
+    station->status = AWAKEN;
+
+    std::list<struct message> victory_messages;
+    if (table->table.empty()) {
+        struct message victory_msg;
+        victory_msg.address = INADDR_BROADCAST;
+        victory_msg.sequence = 0;
+        victory_msg.type = ELECTION_VICTORY;
+        victory_msg.payload = *station;
+        
+        datagram_queue->mutex_sending.lock();
+        datagram_queue->sending_queue.push_back(victory_msg);
+        datagram_queue->mutex_sending.unlock();
+    }
+    else
+        multicast_election(station, datagram_queue, table, ELECTION_VICTORY, false); 
+}
+
