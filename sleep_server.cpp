@@ -17,22 +17,19 @@
 // #include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
+#include "include/input_parser.h"
 #include "include/sleep_server.h"
-
-// Constants
-#define TKN_MANAGER "manager"
-#define TKN_DEBUG "debug"
 
 int main(int argc, const char *argv[]) {
     std::cout << "Initiating Sleep Server" << std::endl;
 
+    auto *args = new InputParser();
+    args->parse(argc, argv);
+
     auto *station = new Station();
-    station->init();
-    if (argc >= 2) {
-        std::string arg = argv[1];
-        if (arg == TKN_DEBUG)
-            station->debug = true;
-    }
+    station->init(args);
+
+    delete args;
 
     auto *stationTable = new management::StationTable();
 
@@ -56,7 +53,7 @@ int main(int argc, const char *argv[]) {
     return 0;
 }
 
-void Station::init()
+void Station::init(InputParser *args)
 {
     char hostname[HOST_NAME_MAX];
     gethostname(hostname, HOST_NAME_MAX);
@@ -66,6 +63,9 @@ void Station::init()
 
     this->findInterfaceName();
     this->findMacAddress();
+
+    this->debug = args->debug;
+    this->election_timeout = args->timeout;
 }
 
 void Station::printStation()

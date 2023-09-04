@@ -9,6 +9,8 @@
 #include <mutex>
 #include <list>
 
+#include "input_parser.h"
+
 #define MAC_ADDRESS_MAX 18
 
 #define MONITOR_INTERVAL 100
@@ -51,7 +53,7 @@ public:
     u_int64_t last_leader_search; // last time the bully algorithm called for a leader
     int leader_search_retries; // last time the bully algorithm called for a leader
     u_int64_t last_update;
-    int election_timeout = 500;
+    u_int64_t election_timeout = 500;
     bool debug = false;
 
     Station()
@@ -61,7 +63,7 @@ public:
         this->last_leader_search = 0;
     }
 
-    void init();
+    void init(InputParser *args);
     void printStation();
     struct station_serial serialize();
     static Station deserialize(struct station_serial serialized);
