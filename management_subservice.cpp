@@ -12,7 +12,7 @@
 using namespace std;
 using namespace management;
 
-void *management::manage(Station* station, ManagementQueue *queue, StationTable *table) 
+void *management::manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *datagram_queue) 
 {
   table->mutex_read.lock();
   while(station->status != EXITING) 
@@ -49,6 +49,8 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
           table->table[op_data.key].status = op_data.new_status;
           table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch() ).count();
+          break;
+        default:
           break;
         }
         

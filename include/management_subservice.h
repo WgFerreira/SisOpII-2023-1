@@ -66,7 +66,7 @@ namespace management {
    * Realiza as operações na tabela de estações
    * 
   */
-  void *manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *dgram_queue);
+  void *manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *datagram_queue);
 
 };
 

@@ -41,7 +41,7 @@ namespace datagram {
     unsigned short seqn; //Número de sequência
     unsigned short length; //Comprimento do payload
     unsigned long timestamp; // Timestamp do dado
-    struct station_table_serial station_table;
+    // monitoring::station_table_serial station_table;
     char _payload[255]; //Dados da mensagem
   };
 
