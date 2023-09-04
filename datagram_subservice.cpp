@@ -106,15 +106,15 @@ int datagram::open_socket()
   if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
     std::cerr << "ERROR opening socket" << std::endl;
       
-  struct timeval timeout;
-  timeout.tv_sec = 0;
-  timeout.tv_usec = 500000; // 500ms
-  int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-  if (ret < 0)
-    std::cout << "ERROR option timeout" << std::endl;
+  // struct timeval timeout;
+  // timeout.tv_sec = 0;
+  // timeout.tv_usec = 500000; // 500ms
+  // int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  // if (ret < 0)
+  //   std::cout << "ERROR option timeout" << std::endl;
       
   int broadcastEnable = 1;
-  ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+  int ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
   if (ret < 0)
     std::cout << "ERROR option broadcast" << std::endl;
 

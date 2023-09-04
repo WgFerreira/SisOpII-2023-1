@@ -60,7 +60,8 @@ void *interface::interface (Station* station, management::StationTable* table)
 			}
 			else 
 			{
-				station->printStation();
+				// station->printStation();
+				cout << "interface: table has update " << table->has_update << endl;
 			}
 			table->mutex_read.unlock();
 		}

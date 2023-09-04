@@ -14,12 +14,13 @@ using namespace management;
 
 void *management::manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *datagram_queue) 
 {
-  table->mutex_read.lock();
   while(station->status != EXITING) 
   {
     if (table->has_update)
     {
       table->mutex_read.unlock();
+      if (station->debug)
+        std::cout << "management: leitura da tabela liberada" << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       table->mutex_read.lock();
       table->has_update = false;
@@ -27,6 +28,8 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
 
     if (!queue->manage_queue.empty() && queue->mutex_manage.try_lock())
     {
+      if (station->debug)
+        std::cout << "management: processando fila de operações na tabela" << std::endl;
       if (table->mutex_write.try_lock())
       {
         struct station_op_data op_data = queue->manage_queue.front();

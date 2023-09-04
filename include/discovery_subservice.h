@@ -6,7 +6,7 @@
 #include "management_subservice.h"
 
 namespace discovery {
-  
+
   /**
    * - Recebe mensagens de descoberta e responde com informações da 
    * estação líder. Adiciona e exclui linhas na tabela de hosts

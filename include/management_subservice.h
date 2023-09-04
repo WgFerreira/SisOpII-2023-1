@@ -36,7 +36,9 @@ namespace management {
 
     StationTable()
     {   
-        this->clock = 0;
+      this->clock = 0;
+      this->has_update = false;
+      this->mutex_read.lock();
     }
 
     struct station_table_serial &serialize();

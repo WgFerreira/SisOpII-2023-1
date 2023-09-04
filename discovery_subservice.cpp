@@ -39,6 +39,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                 */
                 if (station->getType() == MANAGER)
                 {
+                    if (station->debug)
+                        std::cout << "discovery: Manager recebeu mensagem de eleição" << std::endl;
                     struct message victory_msg;
                     victory_msg.address = msg.address;
                     victory_msg.sequence = 0;
@@ -74,6 +76,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                     */
                     if (table->has(msg.payload.macAddress))
                     {
+                        if (station->debug)
+                            std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
                         station->setManager(NULL);
                         /**
                          * Se existem outras estação conhecidas com o pid mais alto, 
@@ -102,6 +106,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                 break;
                 
             case MessageType::ELECTION_ANSWER :
+                if (station->debug)
+                    std::cout << "discovery: Perdeu eleição" << std::endl;
                 station->setType(PARTICIPANT);
                 station->status = WAITING_ELECTION;
                 station->last_leader_search = now();
@@ -109,6 +115,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                 break;
                 
             case MessageType::ELECTION_VICTORY :
+                if (station->debug)
+                    std::cout << "discovery: Novo Manager Recebido" << std::endl;
                 station->setType(PARTICIPANT);
                 station->status = AWAKEN;
                 station->last_leader_search = now();
@@ -119,6 +127,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
             case MessageType::LEAVING :
                 if (station->getType() == MANAGER)
                 {
+                    if (station->debug)
+                        std::cout << "discovery: Uma estação está saindo da rede" << std::endl;
                     if (table->has(msg.payload.macAddress)) 
                     {
                         struct management::station_op_data op;
@@ -131,8 +141,12 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                     }
                 }
                 else 
+                {
+                    if (station->debug)
+                        std::cout << "discovery: O Manager está saindo da rede" << std::endl;
                     if (msg.payload.macAddress == station->getManager()->macAddress)
                         station->setManager(NULL);
+                }
                 break;
             
             default:
@@ -168,13 +182,13 @@ void discovery::bully_algorithm(Station* station, datagram::DatagramQueue *datag
      * Se está em eleição e ainda não tem resposta, tenta de novo 
      *  ou termina a eleição com vitória
     */
-    if (station->status == ELECTING && millis_since(station->last_leader_search) > 500)
+    if (station->status == ELECTING && millis_since(station->last_leader_search) > station->election_timeout)
         leader_election(station, datagram_queue, table);
 
     /**
      * Se já perdeu a eleição, mas ainda nao tem resposta, inicia a eleição de novo
     */
-    if (station->status == WAITING_ELECTION && millis_since(station->last_leader_search) > 500)
+    if (station->status == WAITING_ELECTION && millis_since(station->last_leader_search) > station->election_timeout)
         station->status = ELECTING;
 }
 
@@ -185,15 +199,21 @@ void discovery::leader_election(Station* station, datagram::DatagramQueue *datag
     */
     if (station->leader_search_retries >= 2)
     {
+        if (station->debug)
+            std::cout << "discovery: Nenhuma Reposta na Eleição" << std::endl;
         election_victory(station, datagram_queue, table);
     } 
     /**
      * Pode tentar iniciar uma eleição até 2 vezes seguidas
     */
     else {
+        if (station->debug)
+            std::cout << "discovery: Iniciando Eleição" << std::endl;
         station->setType(CANDIDATE);
 
         if (table->table.empty()) {
+            if (station->debug)
+                std::cout << "discovery: Broadcasting eleição" << std::endl;
             struct message election_msg;
             election_msg.address = INADDR_BROADCAST;
             election_msg.sequence = 0;
@@ -204,8 +224,11 @@ void discovery::leader_election(Station* station, datagram::DatagramQueue *datag
             datagram_queue->sending_queue.push_back(election_msg);
             datagram_queue->mutex_sending.unlock();
         }
-        else
+        else {
+            if (station->debug)
+                std::cout << "discovery: Multicasting eleição" << std::endl;
             multicast_election(station, datagram_queue, table, MANAGER_ELECTION, true);
+        }
             
         station->last_leader_search = now();
         station->leader_search_retries += 1;
@@ -247,6 +270,8 @@ void discovery::election_victory(Station* station, datagram::DatagramQueue *data
 
     std::list<struct message> victory_messages;
     if (table->table.empty()) {
+        if (station->debug)
+            std::cout << "discovery: Broadcasting vitória" << std::endl;
         struct message victory_msg;
         victory_msg.address = INADDR_BROADCAST;
         victory_msg.sequence = 0;
@@ -257,7 +282,10 @@ void discovery::election_victory(Station* station, datagram::DatagramQueue *data
         datagram_queue->sending_queue.push_back(victory_msg);
         datagram_queue->mutex_sending.unlock();
     }
-    else
+    else {
+        if (station->debug)
+            std::cout << "discovery: Multicasting vitória" << std::endl;
         multicast_election(station, datagram_queue, table, ELECTION_VICTORY, false); 
+    }
 }
 

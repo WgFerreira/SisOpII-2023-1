@@ -51,6 +51,7 @@ public:
     u_int64_t last_leader_search; // last time the bully algorithm called for a leader
     int leader_search_retries; // last time the bully algorithm called for a leader
     u_int64_t last_update;
+    int election_timeout = 500;
     bool debug = false;
 
     Station()
