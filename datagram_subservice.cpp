@@ -14,16 +14,18 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
     if (!datagram_queue->sending_queue.empty() && datagram_queue->mutex_sending.try_lock())
     {
       struct message msg = datagram_queue->sending_queue.front();
+      datagram_queue->sending_queue.pop_front();
+      datagram_queue->mutex_sending.unlock();
 
       struct sockaddr_in sock_addr = socket_address(msg.address);
       struct packet data = create_packet(msg.type, 0, msg.payload.serialize());
 
+      if (station->debug)
+        std::cout << "sending a message" << std::endl;
+
       int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
       if (n < 0) 
         std::cout << "ERROR sending message" << std::endl;
-        
-      datagram_queue->sending_queue.pop_front();
-      datagram_queue->mutex_sending.unlock();
     }
   }
   
@@ -48,6 +50,9 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
     int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
     if (n > 0)
     {
+      if (station->debug)
+        std::cout << "a message was received" << std::endl;
+        
       inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
       Station participant = Station::deserialize(client_data.station);
 
