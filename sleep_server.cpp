@@ -40,7 +40,7 @@ int main(int argc, const char *argv[]) {
     auto *management = new management::ManagementQueue();
 
     auto th_sender = std::thread(&datagram::sender, station, datagram);
-    auto th_receiver = std::thread(&datagram::sender, station, datagram);
+    auto th_receiver = std::thread(&datagram::receiver, station, datagram);
     auto th_discovery = std::thread(&discovery::discovery, station, datagram, management, stationTable);
     auto th_management = std::thread(&management::manage, station, management, stationTable, datagram);
     auto th_interface = std::thread(&interface::interface, station, stationTable);

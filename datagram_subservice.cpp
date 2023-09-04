@@ -50,9 +50,12 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
     int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
     if (n > 0)
     {
+      if (client_data.station.pid == station->getPid())
+        continue;
+        
       if (station->debug)
         std::cout << "a message was received" << std::endl;
-        
+
       inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
       Station participant = Station::deserialize(client_data.station);
 
