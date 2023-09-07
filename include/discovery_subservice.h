@@ -2,20 +2,27 @@
 #define _DISCOVERY_H
 
 #include "sleep_server.h"
+#include "datagram_subservice.h"
+#include "management_subservice.h"
 
 namespace discovery {
-  
-  /**
-   * Recebe mensagens de descoberta e responde com informações da 
-   * estação líder. Adiciona e exclui linhas na tabela de hosts
-  */
-  void *server (Station* station, StationTable* table, struct semaphores *sem);
 
   /**
-   * Envia mensagens de descoberta e espera receber informações 
-   * sobre a estação líder
+   * - Recebe mensagens de descoberta e responde com informações da 
+   * estação líder. Adiciona e exclui linhas na tabela de hosts
+   * - Envia mensagens de descoberta e espera receber informações 
+   * sobre a estação líder.
+   * - Implementa o algoritmo valentão
   */
-  void *client (Station* station, StationTable* table, struct semaphores *sem);
+  void *discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue, management::StationTable *table);
+
+  /**
+   * Inicia ou termina uma eleição de líder com o algoritmo bully
+  */
+  void bully_algorithm(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
+  void leader_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
+  void multicast_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table, datagram::MessageType type, bool filter_pid);
+  void election_victory(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
 
 };
 

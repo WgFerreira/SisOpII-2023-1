@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <string.h>
 #include <bits/stdc++.h>
@@ -12,17 +13,20 @@
 
 using namespace std;
 
-void *interface::printServer (Station* station, StationTable* table, struct semaphores *sem) {
+void *interface::interface (Station* station, management::StationTable* table)
+{
 	const char separator    = ' ';
 	const int nameWidth     = 30;
 
-	while(station->status != EXITING) {
-		if (table->has_update)
+	while(station->status != EXITING) 
+	{
+		if (table->mutex_read.try_lock())
 		{
-			sem->mutex_read.lock();
-		
 			if (!station->debug)
 			{
+				struct winsize w;
+				ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
 				system("clear");
 
 				cout << endl;
@@ -54,60 +58,21 @@ void *interface::printServer (Station* station, StationTable* table, struct sema
 					}
 				}
 			}
-			
-			table->has_update = false;
-			sem->mutex_read.unlock();
-		}
-	}
-	if (station->debug)
-		std::cout << "saindo interface" << std::endl;
-}
-
-void *interface::printClient (Station* station, StationTable* table, struct semaphores *sem) {
-	const char separator    = ' ';
-	const int nameWidth     = 30;
-
-	while(station->status != EXITING) {
-		if (table->has_update)
-		{
-			if (!station->debug)
+			else 
 			{
-				system("clear");
-
-				cout << endl;
-				cout << endl;
-				cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
-				cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
-				cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
-				cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
-				cout << endl;
-				cout << "--------------------------------------------------------------------------------------------------------------";
-				cout << endl;
-				
-				if (station->getManager() != NULL) {
-					string status = "";
-					if (station->getManager()->status == AWAKEN)
-						status = "AWAKEN";
-					else
-						status = "ASLEEP";
-					
-					cout << left << setw(nameWidth) << setfill(separator) << station->manager->hostname;
-					cout << left << setw(nameWidth) << setfill(separator) << station->manager->macAddress;
-					cout << left << setw(nameWidth) << setfill(separator) << station->manager->ipAddress;
-					cout << left << setw(nameWidth) << setfill(separator) << status;
-				}
-				cout << endl;
+				// station->printStation();
+				cout << "interface: table has update " << table->has_update << endl;
 			}
-
-			table->has_update = false;
+			table->mutex_read.unlock();
 		}
 	}
 	if (station->debug)
 		std::cout << "saindo interface" << std::endl;
+	return 0;
 }
 
-
-void *interface::getCommand (Station* station, StationTable* table, struct semaphores *sem) {
+void *interface::command (Station* station, management::StationTable* table) 
+{
 	string command_values[5];
 	
 	while(station->status != EXITING) {
@@ -128,7 +93,7 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 			if (command_values[0].compare("wakeup") == 0) 
 			{
 				string macAddress = "";
-				sem->mutex_read.lock();
+				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
 					if (tupla.second.hostname.compare(command_values[1]))
@@ -137,7 +102,7 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 						break;
 					}
 				}
-				sem->mutex_read.unlock();
+				table->mutex_write.unlock();
 
 				if (macAddress.size() > 0)
 				{
@@ -156,4 +121,5 @@ void *interface::getCommand (Station* station, StationTable* table, struct semap
 	}
 	if (station->debug)
 		std::cout << "saindo command" << std::endl;
+	return 0;
 }
