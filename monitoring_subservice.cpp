@@ -12,119 +12,128 @@
 #include "include/monitoring_subservice.h"
 #include "include/sleep_server.h"
 
-// void *monitoring::server (Station* station, StationTable* table, struct semaphores *sem) 
-// {
-//     int sockfd = open_socket();
+using namespace datagram;
+using namespace management;
 
-//     while (station->status != EXITING) 
-//     {
-//         for (auto &tupla : table->table)
-//         {
-//             auto participant = tupla.second;
-//             auto now = std::chrono::duration_cast<std::chrono::seconds>(
-//                 std::chrono::system_clock::now().time_since_epoch() ).count();
-//             if (now - participant.last_update > 5 && participant.ipAddress.length() > 0) 
-//             {
-//                 struct sockaddr_in sock_addr = participant.getSocketAddress(MONITOR_PORT);
-                
-//                 struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "sleep status request");
-//                 data.station = participant.serialize();
+void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, ManagementQueue *manage_queue, StationTable *table)
+{
+  while (station->status != EXITING)
+  {
+    /**
+     * Envia mensagem de monitoramento
+     */
+    if (station->getType() == MANAGER)
+    {
+      std::list<datagram::message> messages;
+      std::list<management::station_op_data> operations;
 
-//                 int n = sendto(sockfd, &data, sizeof(data), 0, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
-//                 if (n < 0)
-//                     std::cout << "ERROR sendto : monitor" << std::endl;
-                    
-//                 struct packet received_data;
-//                 struct sockaddr_in server_addr;
-//                 socklen_t server_addr_len = sizeof(struct sockaddr_in);
+      if (table->mutex_write.try_lock())
+      {
+        for (auto &participant : table->getValues(0))
+        {
+          if (participant.macAddress == station->macAddress)
+            continue;
 
-//                 int size = recvfrom(sockfd, &received_data, sizeof(struct packet), 0, (struct sockaddr *) &server_addr, &server_addr_len);
-//                 if (size > 0 
-//                     && validate_packet(&received_data, data.timestamp) 
-//                     && received_data.station.macAddress == participant.macAddress)
-//                 {
-//                     if (received_data.type == SLEEP_STATUS_REQUEST)
-//                     {
-//                         sem->mutex_buffer.lock();
+          if (millis_since(participant.last_update) > station->monitor_interval 
+              && millis_since(participant.last_update_request) > station->monitor_interval)
+          {
+            if (participant.update_request_retries > 2 && participant.status != ASLEEP)
+            {
+              struct management::station_op_data op;
+              op.operation = ManagerOperation::UPDATE_STATUS;
+              op.key = participant.macAddress;
+              op.new_status = ASLEEP;
 
-//                         table->buffer.operation = UPDATE_STATUS;
-//                         table->buffer.station = participant;
-//                         table->buffer.key = participant.macAddress;
-//                         table->buffer.new_status = AWAKEN;
+              operations.push_back(op);
+            }
+              
+            struct message request_msg;
+            request_msg.address = participant.getAddress();
+            request_msg.sequence = 0;
+            request_msg.type = STATUS_REQUEST;
+            request_msg.payload = *station;
 
-//                         sem->mutex_write.unlock();
+            messages.push_back(request_msg);
+            participant.update_request_retries += 1;
+            participant.last_update_request = now();
+          }
+        }
+        table->mutex_write.unlock();
 
-//                         if (station->debug)
-//                             std::cout << "Got a sleep status packet from " << participant.ipAddress << ": " << received_data._payload << std::endl;
-//                     }
-//                 }
-//                 else
-//                 {
-//                     sem->mutex_buffer.lock();
+        if (!operations.empty())
+        {
+          manage_queue->mutex_manage.lock();
+          manage_queue->manage_queue.splice(manage_queue->manage_queue.end(), operations);
+          manage_queue->mutex_manage.unlock();
+        }
 
-//                     table->buffer.operation = UPDATE_STATUS;
-//                     table->buffer.key = participant.macAddress;
-//                     table->buffer.new_status = ASLEEP;
+        if (!messages.empty())
+        {
+          datagram_queue->mutex_sending.lock();
+          datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
+          datagram_queue->mutex_sending.unlock();
+        }
+      }
+    }
 
-//                     sem->mutex_write.unlock();
-                    
-//                     if (station->debug)
-//                         std::cout << "Didn't get a sleep status packet from " << participant.ipAddress << std::endl;
-//                 }
-//             }            
-//         }
-//         std::this_thread::sleep_for(std::chrono::milliseconds(MONITOR_INTERVAL));
-//     }
-    
-//     close(sockfd);
-//     if (station->debug)
-//         std::cout << "saindo monitor" << std::endl;
-//     return 0;
-// }
+    /**
+     * Processa mensagens da fila
+    */
+    if (!datagram_queue->monitoring_queue.empty()) {
+      datagram_queue->mutex_monitoring.lock();
 
-// void *monitoring::client (Station* station) 
-// {
-//     int sockfd = open_socket();
+      struct message msg = datagram_queue->monitoring_queue.front();
+      datagram_queue->monitoring_queue.pop_front();
+      datagram_queue->mutex_monitoring.unlock();
+      
+      switch (msg.type)
+      {
+      case MessageType::STATUS_REQUEST : 
+      {
+        struct message response_msg;
+        response_msg.address = msg.address;
+        response_msg.sequence = 0;
+        response_msg.type = STATUS_RESPONSE;
+        response_msg.payload = *station;
 
-//     struct sockaddr_in sock_addr = any_address(MONITOR_PORT); 
+        datagram_queue->mutex_sending.lock();
+        datagram_queue->sending_queue.push_back(response_msg);
+        datagram_queue->mutex_sending.unlock();
 
-//     if (bind(sockfd, (struct sockaddr *) &sock_addr, sizeof(struct sockaddr)) < 0) 
-//         std::cerr << "ERROR on binding : monitor" << std::endl;
+        station->last_update = now();
+      }
+        break;
+        
+      case MessageType::STATUS_RESPONSE :
+        if (station->getType() == MANAGER)
+        {
+          struct management::station_op_data op;
+          op.operation = ManagerOperation::UPDATE_STATUS;
+          op.key = msg.payload.macAddress;
+          op.new_status = AWAKEN;
 
-//     while(station->status != EXITING)
-//     {
-//         if (station->getManager() != NULL)
-//         {
-//             struct sockaddr_in client_addr;
-//             struct packet client_data;
-//             socklen_t client_addr_len = sizeof(struct sockaddr_in);
-            
-//             int size = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
-//             if (size > 0)
-//             {
-//                 if (client_data.type == SLEEP_STATUS_REQUEST)
-//                 {
-//                     char client_ip_addr[INET_ADDRSTRLEN];
-//                     inet_ntop(AF_INET, &(client_addr.sin_addr), client_ip_addr, INET_ADDRSTRLEN);
+          manage_queue->mutex_manage.lock();
+          manage_queue->manage_queue.push_back(op);
+          manage_queue->mutex_manage.unlock();
+        }
+        break;
+      
+      default:
+        break;
+      }
+    }
 
-//                     if (station->debug)
-//                         std::cout << "Got a sleep status request from " << client_ip_addr << ": " << client_data._payload << std::endl;
+    /**
+     * Monitora o Manager
+    */
+    if (station->getType() == PARTICIPANT)
+    {
+      if (millis_since(station->last_update) >= station->monitor_interval*1.5)
+        station->setManager(NULL);
+    }
+  }
 
-//                     station->ipAddress = client_data.station.ipAddress;
-
-//                     struct packet data = create_packet(SLEEP_STATUS_REQUEST, 0, "AWAKEN");
-//                     data.station = station->serialize();
-
-//                     int n = sendto(sockfd, &data, sizeof(data), 0,(struct sockaddr *) &client_addr, client_addr_len);
-//                     if (n  < 0) 
-//                         std::cerr << "ERROR on sendto : monitor" << std::endl;
-//                 }
-//             }
-//         }
-//     }
-
-//     close(sockfd);
-//     if (station->debug)
-//         std::cout << "saindo monitor" << std::endl;
-//     return 0;
-// }
+  if (station->debug)
+    std::cout << "saindo monitor" << std::endl;
+  return 0;
+}

@@ -14,7 +14,7 @@
 
 // Subservices
 #include "include/discovery_subservice.h"
-// #include "include/monitoring_subservice.h"
+#include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
 #include "include/input_parser.h"
@@ -39,6 +39,7 @@ int main(int argc, const char *argv[]) {
     auto th_sender = std::thread(&datagram::sender, station, datagram);
     auto th_receiver = std::thread(&datagram::receiver, station, datagram);
     auto th_discovery = std::thread(&discovery::discovery, station, datagram, management, stationTable);
+    auto th_monitor = std::thread(&monitoring::monitor, station, datagram, management, stationTable);
     auto th_management = std::thread(&management::manage, station, management, stationTable, datagram);
     auto th_interface = std::thread(&interface::interface, station, stationTable);
     auto th_command = std::thread(&interface::command, station, stationTable);
@@ -46,6 +47,7 @@ int main(int argc, const char *argv[]) {
     th_sender.join();
     th_receiver.join();
     th_discovery.join();
+    th_monitor.join();
     th_management.join();
     th_interface.join();
     th_command.join();
