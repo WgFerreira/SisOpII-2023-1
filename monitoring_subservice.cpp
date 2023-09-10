@@ -39,6 +39,8 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
           {
             if (participant.update_request_retries > 2 && participant.status != ASLEEP)
             {
+              if (station->debug)
+                std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
               struct management::station_op_data op;
               op.operation = ManagerOperation::UPDATE_STATUS;
               op.key = participant.macAddress;
@@ -62,6 +64,8 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
 
         if (!operations.empty())
         {
+          if (station->debug)
+            std::cout << "monitor: Atualizando status de " << messages.size() << " participantes para ASLEEP." << std::endl;
           manage_queue->mutex_manage.lock();
           manage_queue->manage_queue.splice(manage_queue->manage_queue.end(), operations);
           manage_queue->mutex_manage.unlock();
@@ -69,6 +73,8 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
 
         if (!messages.empty())
         {
+          if (station->debug)
+            std::cout << "monitor: Requisitando status de " << messages.size() << " participantes." << std::endl;
           datagram_queue->mutex_sending.lock();
           datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
           datagram_queue->mutex_sending.unlock();
@@ -90,6 +96,8 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
       {
       case MessageType::STATUS_REQUEST : 
       {
+        if (station->debug)
+          std::cout << "monitor: Respondendo requisição de status" << std::endl;
         struct message response_msg;
         response_msg.address = msg.address;
         response_msg.sequence = 0;
@@ -107,6 +115,8 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
       case MessageType::STATUS_RESPONSE :
         if (station->getType() == MANAGER)
         {
+          if (station->debug)
+            std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
           struct management::station_op_data op;
           op.operation = ManagerOperation::UPDATE_STATUS;
           op.key = msg.payload.macAddress;
@@ -129,7 +139,11 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
     if (station->getType() == PARTICIPANT)
     {
       if (millis_since(station->last_update) >= station->monitor_interval*1.5)
+      {
+        if (station->debug)
+          std::cout << "monitor: Manager parou de requisitar status" << std::endl;
         station->setManager(NULL);
+      }
     }
   }
 
