@@ -21,59 +21,58 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
       table->mutex_read.unlock();
       if (station->debug)
         std::cout << "management: leitura da tabela liberada" << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       table->mutex_read.lock();
       table->has_update = false;
     }
 
-    if (!queue->manage_queue.empty() && queue->mutex_manage.try_lock())
+    if (!queue->manage_queue.empty())
     {
       if (station->debug)
         std::cout << "management: processando fila de operações na tabela" << std::endl;
-      if (table->mutex_write.try_lock())
-      {
-        struct station_op_data op_data = queue->manage_queue.front();
-        queue->manage_queue.pop_front();
-        queue->mutex_manage.unlock();
 
-        table->has_update = true;
-        table->clock += 1;
-        switch (op_data.operation)
+      queue->mutex_manage.lock();
+      struct station_op_data op_data = queue->manage_queue.front();
+      queue->manage_queue.pop_front();
+      queue->mutex_manage.unlock();
+
+      table->mutex_write.lock();
+      table->has_update = true;
+      table->clock += 1;
+      switch (op_data.operation)
+      {
+      case INSERT:
+        if (station->debug)
+          std::cout << "management: inserindo nova estação" << std::endl;
+        table->table.insert(std::pair<std::string,Station>(op_data.key, op_data.station));
+        table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch() ).count();
+        table->table[op_data.key].update_request_retries = 0;
+        break;
+      case DELETE:
+        if (table->has(op_data.key))
         {
-        case INSERT:
           if (station->debug)
-            std::cout << "management: inserindo nova estação" << std::endl;
-          table->table.insert(std::pair<std::string,Station>(op_data.key, op_data.station));
+            std::cout << "management: removendo uma estação" << std::endl;
+          table->table.erase(op_data.key);
+        }
+        break;
+      case UPDATE_STATUS:
+        if (table->has(op_data.key))
+        {
+          if (station->debug)
+            std::cout << "management: atualizando status de uma estação" << std::endl;
+          table->table[op_data.key].status = op_data.new_status;
           table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch() ).count();
           table->table[op_data.key].update_request_retries = 0;
-          break;
-        case DELETE:
-          if (table->has(op_data.key))
-          {
-            if (station->debug)
-              std::cout << "management: removendo uma estação" << std::endl;
-            table->table.erase(op_data.key);
-          }
-          break;
-        case UPDATE_STATUS:
-          if (table->has(op_data.key))
-          {
-            if (station->debug)
-              std::cout << "management: atualizando status de uma estação" << std::endl;
-            table->table[op_data.key].status = op_data.new_status;
-            table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
-              std::chrono::system_clock::now().time_since_epoch() ).count();
-            table->table[op_data.key].update_request_retries = 0;
-          }
-          break;
-        default:
-          break;
         }
-        
-        table->mutex_write.unlock();
+        break;
+      default:
+        break;
       }
-      queue->mutex_manage.unlock();
+      
+      table->mutex_write.unlock();
     }
   }
   
