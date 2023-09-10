@@ -21,7 +21,12 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
       struct packet data = create_packet(msg.type, 0, msg.payload.serialize());
 
       if (station->debug)
-        std::cout << "sending a message " << messageTypeToString(data.type) << std::endl;
+      {
+        char ipAddress[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(sock_addr.sin_addr), ipAddress, INET_ADDRSTRLEN);
+        std::cout << "sending a message " << messageTypeToString(data.type)
+            << " to " << ipAddress << std::endl;
+      } 
 
       int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
       if (n < 0) 
@@ -53,11 +58,12 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
       if (client_data.station.pid == station->getPid())
         continue;
         
-      if (station->debug)
-        std::cout << "a message was received " << messageTypeToString(client_data.type) << std::endl;
-
       inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
       Station participant = Station::deserialize(client_data.station);
+
+      if (station->debug)
+        std::cout << "a message was received " << messageTypeToString(client_data.type) 
+            << " from " << client_data.station.ipAddress << std::endl;
 
       struct message msg;
       msg.type = client_data.type;
