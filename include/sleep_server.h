@@ -50,10 +50,16 @@ public:
     std::string macAddress;
     std::string ipAddress;
     std::string hostname;
+
     u_int64_t last_leader_search; // last time the bully algorithm called for a leader
-    int leader_search_retries; // last time the bully algorithm called for a leader
+    int leader_search_retries; 
+
     u_int64_t last_update;
+    u_int64_t last_update_request;
+    u_int64_t update_request_retries;
+
     u_int64_t election_timeout = 500;
+    u_int64_t monitor_interval = 1000;
     bool debug = false;
 
     Station()

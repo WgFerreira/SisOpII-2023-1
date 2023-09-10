@@ -44,6 +44,7 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
           table->table.insert(std::pair<std::string,Station>(op_data.key, op_data.station));
           table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch() ).count();
+          table->table[op_data.key].update_request_retries = 0;
           break;
         case DELETE:
           table->table.erase(op_data.key);
@@ -52,6 +53,7 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
           table->table[op_data.key].status = op_data.new_status;
           table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
             std::chrono::system_clock::now().time_since_epoch() ).count();
+          table->table[op_data.key].update_request_retries = 0;
           break;
         default:
           break;

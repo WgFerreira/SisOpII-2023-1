@@ -5,6 +5,7 @@
 
 #define TKN_DEBUG "--debug"
 #define TKN_TIMEOUT "--timeout"
+#define TKN_MONITOR "--monitor"
 
 void InputParser::parse(int argc, const char *argv[])
 {
@@ -13,10 +14,17 @@ void InputParser::parse(int argc, const char *argv[])
     std::string arg = argv[i];
     if (arg == TKN_DEBUG)
       this->debug = true;
-    if (arg == TKN_TIMEOUT && i+1 < argc)
+
+    else if (arg == TKN_TIMEOUT && i+1 < argc)
     {
       i++;
       this->timeout = std::stoi(argv[i]);
+    }
+    
+    else if (arg == TKN_MONITOR && i+1 < argc)
+    {
+      i++;
+      this->monitor = std::stoi(argv[i]);
     }
   }
 }

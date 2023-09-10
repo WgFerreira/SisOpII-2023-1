@@ -66,6 +66,7 @@ void Station::init(InputParser *args)
 
     this->debug = args->debug;
     this->election_timeout = args->timeout;
+    this->monitor_interval = args->monitor;
 }
 
 void Station::printStation()
