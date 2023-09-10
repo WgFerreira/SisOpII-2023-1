@@ -138,10 +138,11 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
     */
     if (station->getType() == PARTICIPANT && station->getManager() != NULL)
     {
-      if (millis_since(station->last_update) >= station->monitor_interval*1.5)
+      auto millis_update = millis_since(station->last_update);
+      if (millis_update >= station->monitor_interval*1.5)
       {
         if (station->debug)
-          std::cout << "monitor: Manager parou de requisitar status" << std::endl;
+          std::cout << "monitor: Manager parou de requisitar status a " << millis_update << " ms" << std::endl;
         station->setManager(NULL);
       }
     }
