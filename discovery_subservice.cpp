@@ -54,8 +54,8 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                     /**
                      * Se o remetente não é conhecido, então é precisa ser adicionada a tabela
                     */
-                    if (!table->has(msg.payload.macAddress))
-                    {
+                    // if (!table->has(msg.payload.macAddress))
+                    // {
                         struct management::station_op_data op;
                         op.operation = INSERT;
                         op.key = msg.payload.macAddress;
@@ -64,7 +64,7 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                         manage_queue->mutex_manage.lock();
                         manage_queue->manage_queue.push_back(op);
                         manage_queue->mutex_manage.unlock();
-                    }
+                    // }
                 }
                 /**
                  * Se é só um participante, talvez tenha que iniciar uma eleição

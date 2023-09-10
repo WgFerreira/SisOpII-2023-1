@@ -27,58 +27,59 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
       std::list<datagram::message> messages;
       std::list<management::station_op_data> operations;
 
-      if (table->mutex_write.try_lock())
+      table->mutex_write.lock();
+      auto list = table->getValues(0);
+      if (station->debug)
+        std::cout << "monitor: " << list.size() << "participantes para monitorar" << std::endl;
+      for (auto &participant : list)
       {
-        for (auto &participant : table->getValues(0))
-        {
-          if (participant.macAddress == station->macAddress)
-            continue;
+        if (participant.macAddress == station->macAddress)
+          continue;
 
-          if (millis_since(participant.last_update) > station->monitor_interval 
-              && millis_since(participant.last_update_request) > station->monitor_interval)
+        if (millis_since(participant.last_update) > station->monitor_interval 
+            && millis_since(participant.last_update_request) > station->monitor_interval)
+        {
+          if (participant.update_request_retries > 2 && participant.status != ASLEEP)
           {
-            if (participant.update_request_retries > 2 && participant.status != ASLEEP)
-            {
-              if (station->debug)
-                std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
-              struct management::station_op_data op;
-              op.operation = ManagerOperation::UPDATE_STATUS;
-              op.key = participant.macAddress;
-              op.new_status = ASLEEP;
+            if (station->debug)
+              std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
+            struct management::station_op_data op;
+            op.operation = ManagerOperation::UPDATE_STATUS;
+            op.key = participant.macAddress;
+            op.new_status = ASLEEP;
 
-              operations.push_back(op);
-            }
-              
-            struct message request_msg;
-            request_msg.address = participant.getAddress();
-            request_msg.sequence = 0;
-            request_msg.type = STATUS_REQUEST;
-            request_msg.payload = *station;
-
-            messages.push_back(request_msg);
-            participant.update_request_retries += 1;
-            participant.last_update_request = now();
+            operations.push_back(op);
           }
-        }
-        table->mutex_write.unlock();
+            
+          struct message request_msg;
+          request_msg.address = participant.getAddress();
+          request_msg.sequence = 0;
+          request_msg.type = STATUS_REQUEST;
+          request_msg.payload = *station;
 
-        if (!operations.empty())
-        {
-          if (station->debug)
-            std::cout << "monitor: Atualizando status de " << messages.size() << " participantes para ASLEEP." << std::endl;
-          manage_queue->mutex_manage.lock();
-          manage_queue->manage_queue.splice(manage_queue->manage_queue.end(), operations);
-          manage_queue->mutex_manage.unlock();
+          messages.push_back(request_msg);
+          participant.update_request_retries += 1;
+          participant.last_update_request = now();
         }
+      }
+      table->mutex_write.unlock();
 
-        if (!messages.empty())
-        {
-          if (station->debug)
-            std::cout << "monitor: Requisitando status de " << messages.size() << " participantes." << std::endl;
-          datagram_queue->mutex_sending.lock();
-          datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
-          datagram_queue->mutex_sending.unlock();
-        }
+      if (!operations.empty())
+      {
+        if (station->debug)
+          std::cout << "monitor: Atualizando status de " << messages.size() << " participantes para ASLEEP." << std::endl;
+        manage_queue->mutex_manage.lock();
+        manage_queue->manage_queue.splice(manage_queue->manage_queue.end(), operations);
+        manage_queue->mutex_manage.unlock();
+      }
+
+      if (!messages.empty())
+      {
+        if (station->debug)
+          std::cout << "monitor: Requisitando status de " << messages.size() << " participantes." << std::endl;
+        datagram_queue->mutex_sending.lock();
+        datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
+        datagram_queue->mutex_sending.unlock();
       }
     }
 
@@ -135,7 +136,7 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
 
     /**
      * Monitora o Manager
-    */
+    *
     if (station->getType() == PARTICIPANT && station->getManager() != NULL)
     {
       auto millis_update = millis_since(station->last_update);
@@ -145,7 +146,7 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
           std::cout << "monitor: Manager parou de requisitar status a " << millis_update << " ms" << std::endl;
         station->setManager(NULL);
       }
-    }
+    }*/
   }
 
   if (station->debug)
