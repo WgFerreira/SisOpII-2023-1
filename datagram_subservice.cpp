@@ -21,7 +21,7 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
       struct packet data = create_packet(msg.type, 0, msg.payload.serialize());
 
       if (station->debug)
-        std::cout << "sending a message" << std::endl;
+        std::cout << "sending a message " << messageTypeToString(data.type) << std::endl;
 
       int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
       if (n < 0) 
@@ -54,7 +54,7 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
         continue;
         
       if (station->debug)
-        std::cout << "a message was received" << std::endl;
+        std::cout << "a message was received " << messageTypeToString(client_data.type) << std::endl;
 
       inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
       Station participant = Station::deserialize(client_data.station);
@@ -132,4 +132,26 @@ struct sockaddr_in datagram::socket_address(in_addr_t addr)
   address.sin_addr.s_addr = addr;
   memset(&(address.sin_zero), 0, 8);
   return address;
+}
+
+std::string datagram::messageTypeToString(MessageType type)
+{
+  switch (type)
+  {
+  case MessageType::MANAGER_ELECTION :
+    return "MANAGER_ELECTION";
+  case MessageType::ELECTION_ANSWER :
+    return "ELECTION_ANSWER";
+  case MessageType::ELECTION_VICTORY :
+    return "ELECTION_VICTORY";
+  case MessageType::STATUS_REQUEST :
+    return "STATUS_REQUEST";
+  case MessageType::STATUS_RESPONSE :
+    return "STATUS_RESPONSE";
+  case MessageType::LEAVING :
+    return "LEAVING";
+  
+  default:
+    return "NONE";
+  } 
 }

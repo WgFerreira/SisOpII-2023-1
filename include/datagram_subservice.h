@@ -78,6 +78,8 @@ namespace datagram {
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);
 
+  std::string messageTypeToString(MessageType type);
+
   /**
    * Thread que envia mensagens UDP na rede 
   */
