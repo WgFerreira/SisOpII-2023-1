@@ -12,7 +12,7 @@ namespace monitoring {
    * O manager atualiza o status de cada participante
    * O participante monitora se o manager ainda está perguntando
   */
-  void *monitor (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *queue, management::StationTable *table);
+  void *monitor (Station* station, management::ManagementQueue *queue, management::StationTable *table);
 
 };
 

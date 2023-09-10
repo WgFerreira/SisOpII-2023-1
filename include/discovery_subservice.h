@@ -14,15 +14,15 @@ namespace discovery {
    * sobre a estação líder.
    * - Implementa o algoritmo valentão
   */
-  void *discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue, management::StationTable *table);
+  void *discovery (Station* station, management::ManagementQueue *manage_queue, management::StationTable *table);
 
   /**
    * Inicia ou termina uma eleição de líder com o algoritmo bully
   */
-  void bully_algorithm(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
-  void leader_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
-  void multicast_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table, datagram::MessageType type, bool filter_pid);
-  void election_victory(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table);
+  void bully_algorithm(Station* station, management::StationTable *table);
+  void leader_election(Station* station, management::StationTable *table);
+  void multicast_election(Station* station, management::StationTable *table, datagram::MessageType type, bool filter_pid);
+  void election_victory(Station* station, management::StationTable *table);
 
 };
 

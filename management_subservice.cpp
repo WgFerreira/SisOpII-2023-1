@@ -1,21 +1,52 @@
-#include <iostream>
-#include <unistd.h>
-#include <string.h>
-#include <semaphore>
-#include <iterator>
-#include <list>
-#include <cmath>
+// #include <iostream>
+// #include <unistd.h>
+// #include <string.h>
+// #include <semaphore>
+// #include <iterator>
+// #include <list>
+// #include <cmath>
 
 #include "include/management_subservice.h"
-#include "include/sleep_server.h"
 
 using namespace std;
 using namespace management;
 
-void *management::manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *datagram_queue) 
+void *management::manage(Station* station, ManagementQueue *queue, StationTable *table) 
 {
-  while(station->status != EXITING) 
+  while(station->GetStatus() != EXITING) 
   {
+    if (!queue->manage_queue.empty())
+    {
+      if (station->debug)
+        std::cout << "management: processando fila de operações na tabela" << std::endl;
+
+      struct station_op_data op_data = queue->atomic_pop();
+
+      switch (op_data.operation)
+      {
+      case INSERT:
+        if (station->debug)
+          std::cout << "management: inserindo nova estação" << std::endl;
+        table->push(op_data.key, op_data.station);
+        break;
+
+      case DELETE:
+        if (station->debug)
+          std::cout << "management: removendo uma estação se existir" << std::endl;
+        table->remove(op_data.key);
+        break;
+
+      case UPDATE_STATUS:
+        if (station->debug)
+          std::cout << "management: atualizando status de uma estação se existir" << std::endl;
+        table->update(op_data.key, op_data.new_status);
+        break;
+
+      default:
+        break;
+      }
+    }
+    
     if (table->has_update)
     {
       table->mutex_read.unlock();
@@ -25,57 +56,6 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
       table->mutex_read.lock();
       table->has_update = false;
     }
-
-    if (!queue->manage_queue.empty())
-    {
-      if (station->debug)
-        std::cout << "management: processando fila de operações na tabela" << std::endl;
-
-      queue->mutex_manage.lock();
-      if (station->debug)
-        std::cout << "management: mutex_manage lock" << std::endl;
-      struct station_op_data op_data = queue->manage_queue.front();
-      queue->manage_queue.pop_front();
-      queue->mutex_manage.unlock();
-
-      table->mutex_write.lock();
-      table->has_update = true;
-      table->clock += 1;
-      switch (op_data.operation)
-      {
-      case INSERT:
-        if (station->debug)
-          std::cout << "management: inserindo nova estação" << std::endl;
-        table->table.insert(std::pair<std::string,Station>(op_data.key, op_data.station));
-        table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
-          std::chrono::system_clock::now().time_since_epoch() ).count();
-        table->table[op_data.key].update_request_retries = 0;
-        break;
-      case DELETE:
-        if (table->has(op_data.key))
-        {
-          if (station->debug)
-            std::cout << "management: removendo uma estação" << std::endl;
-          table->table.erase(op_data.key);
-        }
-        break;
-      case UPDATE_STATUS:
-        if (table->has(op_data.key))
-        {
-          if (station->debug)
-            std::cout << "management: atualizando status de uma estação" << std::endl;
-          table->table[op_data.key].status = op_data.new_status;
-          table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch() ).count();
-          table->table[op_data.key].update_request_retries = 0;
-        }
-        break;
-      default:
-        break;
-      }
-      
-      table->mutex_write.unlock();
-    }
   }
   
   if (station->debug)
@@ -83,16 +63,16 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
   return 0;
 }
 
-std::list<Station> management::StationTable::getValues(unsigned int pid) 
+std::list<StationTableItem> management::StationTable::getValues(unsigned int pid) 
 {
-  std::list<Station> list;
+  std::list<StationTableItem> list;
 
   this->mutex_write.lock();
   for (auto &p : this->table)
     list.push_back(p.second);
   this->mutex_write.unlock();
 
-  list.remove_if([&](Station &station) { return station.getPid() <= pid; });
+  list.remove_if([&](StationTableItem &station) { return station.pid <= pid; });
   return list;
 }
 
@@ -104,6 +84,58 @@ bool management::StationTable::has(std::string key)
   return found_key;
 }
 
+void management::StationTable::push(std::string key, StationTableItem item)
+{
+  this->mutex_write.lock();
+  this->has_update = true;
+  this->clock += 1;
+  this->table.insert(std::pair<std::string,StationTableItem>(key, item));
+  this->table[key].last_update = now();
+  this->table[key].update_request_retries = 0;
+  this->mutex_write.unlock();
+}
+
+void management::StationTable::remove(std::string key)
+{
+  if (this->has(key))
+  {
+    this->mutex_write.lock();
+    this->has_update = true;
+    this->clock += 1;
+    this->table.erase(key);
+    this->mutex_write.unlock();
+  }
+}
+
+void management::StationTable::update(std::string key, StationStatus new_status)
+{
+  if (this->has(key))
+  {
+    this->mutex_write.lock();
+    this->has_update = true;
+    this->clock += 1;
+    this->table[key].status = new_status;
+    this->table[key].last_update = now();
+    this->table[key].update_request_retries = 0;
+    this->mutex_write.unlock();
+  }
+}
+
+void management::ManagementQueue::atomic_push(station_op_data op_data)
+{
+  this->mutex_manage.lock();
+  this->manage_queue.push_back(op_data);
+  this->mutex_manage.unlock();
+}
+
+station_op_data management::ManagementQueue::atomic_pop() 
+{
+  this->mutex_manage.lock();
+  station_op_data data = this->manage_queue.front();
+  this->manage_queue.pop_front();
+  this->mutex_manage.unlock();
+  return data;
+}
 
 struct management::station_table_serial &StationTable::serialize()
 {

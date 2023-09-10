@@ -14,12 +14,6 @@ namespace interface {
    * estação líder para a estação participante
   */
   void *interface (Station* station, management::StationTable* table);
-
-  /**
-   * Espera comando EXIT ou WAKEUP host
-  */
-  void *command (Station* station, management::StationTable* table);
-
 };
 
 #endif
