@@ -136,7 +136,7 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
     /**
      * Monitora o Manager
     */
-    if (station->getType() == PARTICIPANT)
+    if (station->getType() == PARTICIPANT && station->getManager() != NULL)
     {
       if (millis_since(station->last_update) >= station->monitor_interval*1.5)
       {

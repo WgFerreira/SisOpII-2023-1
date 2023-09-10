@@ -122,6 +122,7 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                 station->last_leader_search = now();
                 station->leader_search_retries = 0;
                 station->setManager(&msg.payload);
+                station->last_update = now();
                 break;
 
             case MessageType::LEAVING :
