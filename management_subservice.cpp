@@ -49,17 +49,23 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
           table->table[op_data.key].update_request_retries = 0;
           break;
         case DELETE:
-          if (station->debug)
-            std::cout << "management: removendo uma estação" << std::endl;
-          table->table.erase(op_data.key);
+          if (table->has(op_data.key))
+          {
+            if (station->debug)
+              std::cout << "management: removendo uma estação" << std::endl;
+            table->table.erase(op_data.key);
+          }
           break;
         case UPDATE_STATUS:
-          if (station->debug)
-            std::cout << "management: atualizando status de uma estação" << std::endl;
-          table->table[op_data.key].status = op_data.new_status;
-          table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::system_clock::now().time_since_epoch() ).count();
-          table->table[op_data.key].update_request_retries = 0;
+          if (table->has(op_data.key))
+          {
+            if (station->debug)
+              std::cout << "management: atualizando status de uma estação" << std::endl;
+            table->table[op_data.key].status = op_data.new_status;
+            table->table[op_data.key].last_update = std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::system_clock::now().time_since_epoch() ).count();
+            table->table[op_data.key].update_request_retries = 0;
+          }
           break;
         default:
           break;

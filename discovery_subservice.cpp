@@ -54,7 +54,7 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
                     /**
                      * Se o remetente não é conhecido, então é precisa ser adicionada a tabela
                     */
-                    if (table->has(msg.payload.macAddress))
+                    if (!table->has(msg.payload.macAddress))
                     {
                         struct management::station_op_data op;
                         op.operation = INSERT;
