@@ -32,6 +32,8 @@ void *management::manage(Station* station, ManagementQueue *queue, StationTable 
         std::cout << "management: processando fila de operações na tabela" << std::endl;
 
       queue->mutex_manage.lock();
+      if (station->debug)
+        std::cout << "management: mutex_manage lock" << std::endl;
       struct station_op_data op_data = queue->manage_queue.front();
       queue->manage_queue.pop_front();
       queue->mutex_manage.unlock();
