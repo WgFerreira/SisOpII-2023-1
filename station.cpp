@@ -41,15 +41,15 @@ void Station::print_interface()
     case AWAKEN:
         status = "AWAKEN";
         break;
-
     case ASLEEP:
         status = "SLEEPING";
         break;
-
     case ELECTING:
         status = "ELECTING";
         break;
-    
+    case WAITING_ELECTION:
+        status = "WAITING ELECTION";
+        break;
     default:
         status = "UNKNOWN";
     }

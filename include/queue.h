@@ -63,6 +63,7 @@ struct table_operation
   std::string key;
   Station station;
   StationStatus new_status;
+  StationType new_type;
 };
 
 class OperationQueue

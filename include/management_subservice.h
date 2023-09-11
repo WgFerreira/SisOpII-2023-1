@@ -32,7 +32,7 @@ namespace management {
     
     void insert(std::string key, Station item);
     void remove(std::string key);
-    void update(std::string key, Station item);
+    void update(std::string key, StationStatus new_status, StationType new_type);
   };
 
   /**

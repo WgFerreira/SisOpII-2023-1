@@ -42,7 +42,7 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
       case UPDATE_STATUS:
         if (station->debug)
           std::cout << "management: atualizando status de uma estação se existir" << std::endl;
-        table->update(op_data.key, op_data.station);
+        table->update(op_data.key, op_data.new_status, op_data.new_type);
         break;
 
       default:
@@ -110,15 +110,15 @@ void management::StationTable::remove(std::string key)
   }
 }
 
-void management::StationTable::update(std::string key, Station item)
+void management::StationTable::update(std::string key, StationStatus new_status, StationType new_type)
 {
   if (this->has(key))
   {
     this->mutex_write.lock();
     this->has_update = true;
     this->clock += 1;
-    this->table[key].status = item.status;
-    this->table[key].setType(item.getType());
+    this->table[key].status = new_status;
+    this->table[key].setType(new_type);
     this->table[key].last_update = now();
     this->table[key].update_request_retries = 0;
     this->mutex_write.unlock();

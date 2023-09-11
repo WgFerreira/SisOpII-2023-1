@@ -44,6 +44,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
           op.operation = TableOperation::UPDATE_STATUS;
           op.key = participant.macAddress;
           op.new_status = ASLEEP;
+          op.new_type = participant.getType();
 
           operations.push_back(op);
         }
@@ -133,12 +134,10 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
           if (station->debug)
             std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
           table_operation op;
-          // op.operation = TableOperation::UPDATE_STATUS;
-          // op.key = msg.payload.macAddress;
-          // op.new_status = AWAKEN;
           op.operation = TableOperation::UPDATE_STATUS;
           op.key = msg.payload.macAddress;
-          op.station = msg.payload;
+          op.new_status = msg.payload.status;
+          op.new_type = msg.payload.getType();
 
           manage_queue->push(op);
         }
