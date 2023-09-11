@@ -106,7 +106,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 station->status = AWAKEN;
                 station->last_leader_search = now();
                 station->leader_search_retries = 0;
-                
+
                 station->setManager(&msg.payload);
                 mutex_no_manager.lock();
                 table->mutex_read.unlock();
@@ -119,14 +119,11 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 {
                     if (station->debug)
                         std::cout << "discovery: Uma estação está saindo da rede" << std::endl;
-                    if (table->has(msg.payload.macAddress)) 
-                    {
-                        table_operation op;
-                        op.operation = DELETE;
-                        op.key = msg.payload.macAddress;
+                    table_operation op;
+                    op.operation = DELETE;
+                    op.key = msg.payload.macAddress;
 
-                        manage_queue->push(op);
-                    }
+                    manage_queue->push(op);
                 }
                 else 
                 {

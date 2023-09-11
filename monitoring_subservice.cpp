@@ -62,7 +62,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
         op.key = participant.macAddress;
 
         operations.push_back(op);
-        
+
         if (station->debug)
           std::cout << "monitor: tentou " << participant.update_request_retries << " vezes" << std::endl;
       }
@@ -70,7 +70,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
       if (!operations.empty())
       {
         if (station->debug)
-          std::cout << "monitor: Atualizando status de " << messages.size() << " participantes para ASLEEP." << std::endl;
+          std::cout << "monitor: Atualizando status de " << messages.size() << " participantes." << std::endl;
         manage_queue->push(operations);
       }
 
