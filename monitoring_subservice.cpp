@@ -29,7 +29,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
       std::list<table_operation> operations;
 
       auto list = table->getValues(0);
-      for (auto &participant : list)
+      for (auto participant : list)
       {
         if (station->debug)
           std::cout << "monitor: " << list.size() << " participantes para monitorar" << std::endl;
