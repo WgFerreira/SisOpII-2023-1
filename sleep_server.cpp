@@ -85,9 +85,9 @@ void end_all_threads_safely()
 {
     mutex_no_manager.unlock();
     
-    send_queue->mutex_read.unlock();
     discovery_queue->mutex_read.unlock();
     monitor_queue->mutex_read.unlock();
+    
+    stationTable->has_update = true;
     manage_queue->mutex_read.unlock();
-    stationTable->mutex_write.unlock();
 }

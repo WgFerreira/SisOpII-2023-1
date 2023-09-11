@@ -8,9 +8,10 @@ using namespace datagram;
 void *datagram::sender(Station *station, MessageQueue *send_queue)
 {
   int sockfd = datagram::open_socket();
+  bool running = true;
 
   send_queue->mutex_read.lock();
-  while (station->status != EXITING || !send_queue->queue.empty())
+  while (running)
   {
     send_queue->mutex_read.lock();
     while (!send_queue->queue.empty())
@@ -31,6 +32,12 @@ void *datagram::sender(Station *station, MessageQueue *send_queue)
       int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
       if (n < 0) 
         std::cout << "ERROR sending message" << std::endl;
+
+      if (msg.type == LEAVING)
+      {
+        running = false;
+        break;
+      }
     }
   }
   
