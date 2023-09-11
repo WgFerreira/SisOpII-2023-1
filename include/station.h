@@ -85,15 +85,15 @@ public:
   std::string GetMacAddress() const { return this->macAddress; }
   StationType GetType() const { return this->type; }
   void        SetType(StationType type) { this->type = type; }
-  StationStatus GetStatus() const { return status; }
+  StationStatus GetStatus() const { return this->status; }
   void          SetStatus(StationStatus status) { this->status = status; }
   u_int64_t GetLast_leader_search() const { return last_leader_search; }
   void      SetLast_leader_search(u_int64_t last_leader_search) { this->last_leader_search = last_leader_search; }
-  int   GetLeader_search_retries() const { return leader_search_retries; }  
+  int   GetLeader_search_retries() const { return this->leader_search_retries; }  
   void  SetLeader_search_retries(int leader_search_retries) { this->leader_search_retries = leader_search_retries; }
-  std::string GetHostname() const { return hostname; }
-  u_int64_t GetUpdate_request_retries() const { return update_request_retries; }
-  void      SetUpdate_request_retries(u_int64_t update_request_retries) { update_request_retries = update_request_retries; }
+  std::string GetHostname() const { return this->hostname; }
+  u_int64_t GetUpdate_request_retries() const { return this->update_request_retries; }
+  void      SetUpdate_request_retries(u_int64_t update_request_retries) { this->update_request_retries = update_request_retries; }
   void SetLast_update(u_int64_t last_update) { this->last_update = last_update; }
   
   /**
