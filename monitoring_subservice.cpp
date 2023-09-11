@@ -28,12 +28,11 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
       std::list<message> messages;
       std::list<table_operation> operations;
 
-      table->mutex_write.lock();
       auto list = table->getValues(0);
-      if (station->debug)
-        std::cout << "monitor: " << list.size() << " participantes para monitorar" << std::endl;
       for (auto &participant : list)
       {
+        if (station->debug)
+          std::cout << "monitor: " << list.size() << " participantes para monitorar" << std::endl;
         if (participant.macAddress == station->macAddress)
           continue;
 
@@ -58,7 +57,6 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
         messages.push_back(request_msg);
         participant.update_request_retries += 1;
       }
-      table->mutex_write.unlock();
 
       if (!operations.empty())
       {
