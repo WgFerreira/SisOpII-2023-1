@@ -117,16 +117,16 @@ void management::StationTable::remove(std::string key)
 
 void management::StationTable::update(std::string key, StationStatus new_status, StationType new_type)
 {
-  if (this->has(key) && 
-      (this->table[key].GetStatus() != new_status || 
-      this->table[key].GetType() != new_type))
+  if (this->has(key))
   {
-    std::cout << this->table[key].GetStatus() << " " << new_status << " " << this->table[key].GetType() << " " << new_type << std::endl;
     this->mutex_write.lock();
-    this->has_update = true;
-    this->clock += 1;
-    this->table[key].SetStatus(new_status);
-    this->table[key].SetType(new_type);
+    if (this->table[key].GetStatus() != new_status || this->table[key].GetType() != new_type)
+    {
+      this->has_update = true;
+      this->clock += 1;
+      this->table[key].SetStatus(new_status);
+      this->table[key].SetType(new_type);
+    }
     this->table[key].update_request_retries = 0;
     this->mutex_write.unlock();
   }
