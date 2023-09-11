@@ -121,6 +121,7 @@ void management::StationTable::update(std::string key, StationStatus new_status,
       (this->table[key].GetStatus() != new_status || 
       this->table[key].GetType() != new_type))
   {
+    std::cout << this->table[key].GetStatus() << " " << new_status << " " << this->table[key].GetType() << " " << new_type << std::endl;
     this->mutex_write.lock();
     this->has_update = true;
     this->clock += 1;
