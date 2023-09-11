@@ -164,7 +164,6 @@ void *discovery::election(Station* station, MessageQueue *send_queue, management
     while (station->atomic_GetStatus() != EXITING)
     {
         mutex_no_manager.lock();
-        mutex_no_manager.unlock();
         /**
          * Se não tem manager, inicia eleição
         */
@@ -185,6 +184,8 @@ void *discovery::election(Station* station, MessageQueue *send_queue, management
         */
         if (station->atomic_GetStatus() == WAITING_ELECTION && millis_since(last_search) > timeout)
             station->atomic_SetStatus(ELECTING);
+            
+        mutex_no_manager.unlock();
     }
 
     if (station->debug)
