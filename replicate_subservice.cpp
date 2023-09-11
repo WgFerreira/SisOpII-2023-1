@@ -16,7 +16,7 @@
 using namespace std;
 using namespace datagram;
 
-void *replicate::replicate (Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, MessageQueue *replicate_queue, StationTable *table)
+void *replicate::replicate (Station* station, MessageQueue *send_queue, StationTable *table)
 {
 	while(station->atomic_GetStatus() != EXITING) 
 	{
@@ -66,7 +66,7 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
                 if (table_serial.clock > table->clock)
                 {
                     std::list<table_operation> ops;
-                    for (int i = 0; i < table_serial.count; i++)
+                    for (unsigned int i = 0; i < table_serial.count; i++)
                     {
                         auto station_serial = table_serial.table[i];
                         struct table_operation op_insert;
@@ -81,6 +81,8 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
             }
         }
     }
+
+    return 0;
 }
 
 

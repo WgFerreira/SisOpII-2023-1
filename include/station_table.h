@@ -31,7 +31,6 @@ class StationTable
     }
 
     struct station_table_serial serialize();
-    void deserialize(StationTable *table, struct station_table_serial serialized);
     std::list<Station> getValues(unsigned int pid);
     bool has(std::string key);
     

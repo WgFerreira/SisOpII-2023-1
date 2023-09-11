@@ -98,14 +98,3 @@ struct station_table_serial StationTable::serialize()
   return serialized;
 }
 
-void StationTable::deserialize(StationTable *table, station_table_serial serialized)
-{
-  // table->clock = serialized.clock;
-  // table->table.clear();
-  // for (unsigned int i = 0; i < serialized.count; i++)
-  // {
-  //   auto station = Station::deserialize(serialized.table[i]);
-
-  //   table->table.insert(std::pair<std::string,Station>(station.macAddress, station));
-  // }
-}

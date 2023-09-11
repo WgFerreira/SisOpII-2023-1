@@ -13,7 +13,7 @@
 using namespace std;
 using namespace management;
 
-void *management::manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue, MessageQueue *replicate_queue) 
+void *management::manage(Station* station, OperationQueue *manage_queue, StationTable *table) 
 {
   manage_queue->mutex_read.lock();
   while(station->atomic_GetStatus() != EXITING) 

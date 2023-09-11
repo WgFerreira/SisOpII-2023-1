@@ -14,7 +14,7 @@ namespace management {
    * 
   */
   
-  void *manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue, MessageQueue *replicate_queue);
+  void *manage(Station* station, OperationQueue *manage_queue, StationTable *table);
 
 };
 

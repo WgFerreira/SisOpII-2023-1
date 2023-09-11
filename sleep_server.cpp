@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
     delete args;
 
     auto th_sender = std::thread(&datagram::sender, station, send_queue);
-    auto th_receiver = std::thread(&datagram::receiver, station, discovery_queue, monitor_queue);
+    auto th_receiver = std::thread(&datagram::receiver, station, discovery_queue, monitor_queue, replicate_queue);
 
     auto th_discovery = std::thread(&discovery::discovery, station, send_queue, discovery_queue, manage_queue, stationTable);
     auto th_election = std::thread(&discovery::election, station, send_queue, stationTable);
@@ -47,10 +47,10 @@ int main(int argc, const char *argv[]) {
     auto th_interface = std::thread(&interface::interface, station, stationTable);
     auto th_command = std::thread(&interface::command, station, stationTable);
     
-    auto th_replicate = std::thread(&replicate::replicate, station, send_queue, manage_queue, replicate_queue, stationTable);
+    auto th_replicate = std::thread(&replicate::replicate, station, send_queue, stationTable);
     auto th_load = std::thread(&replicate::load, station, manage_queue, replicate_queue, stationTable);
 
-    management::manage(station, manage_queue, stationTable, send_queue, replicate_queue);
+    management::manage(station, manage_queue, stationTable);
 
     th_sender.join();
     th_receiver.join();
