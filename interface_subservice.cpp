@@ -30,12 +30,34 @@ void *interface::interface (Station* station, management::StationTable* table)
 
 			cout << endl;
 			cout << endl;
+			cout << left << setw(2) << setfill(separator) << " ";
 			cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
-			cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
-			cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
-			cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
+			cout << left << setw(20) << setfill(separator) << "MAC ADDRESS";
+			cout << left << setw(20) << setfill(separator) << "IP ADDRESS";
+			cout << left << setw(10) << setfill(separator) << "STATUS";
 			cout << endl;
 			cout << "--------------------------------------------------------------------------------------------------------------";
+			cout << endl;
+			
+			string status = "";
+			if (station->status == AWAKEN)
+				status = "AWAKEN";
+			else
+				status = "ASLEEP";
+
+			string type = "";
+			if (station->getType() == MANAGER)
+				type = "*";
+			else if (station->getType() == CANDIDATE)
+				type = "?";
+			else
+				type = " ";
+			
+			cout << left << setw(2) << setfill(separator) << type;
+			cout << left << setw(nameWidth) << setfill(separator) << station->hostname;
+			cout << left << setw(20) << setfill(separator) << station->macAddress;
+			cout << left << setw(20) << setfill(separator) << station->ipAddress;
+			cout << left << setw(10) << setfill(separator) << status;
 			cout << endl;
 
 			for (auto &tupla : table->table)
@@ -48,7 +70,16 @@ void *interface::interface (Station* station, management::StationTable* table)
 						status = "AWAKEN";
 					else
 						status = "ASLEEP";
+
+					string type = "";
+					if (s.getType() == MANAGER)
+						type = "*";
+					else if (s.getType() == CANDIDATE)
+						type = "?";
+					else
+						type = " ";
 					
+					cout << left << setw(2) << setfill(separator) << type;
 					cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
 					cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
 					cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;

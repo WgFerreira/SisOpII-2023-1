@@ -106,8 +106,11 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 station->status = AWAKEN;
                 station->last_leader_search = now();
                 station->leader_search_retries = 0;
+                
                 station->setManager(&msg.payload);
                 mutex_no_manager.lock();
+                table->mutex_read.unlock();
+
                 station->last_update = now();
                 break;
 
@@ -233,8 +236,11 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, man
     station->last_leader_search = now();
     station->leader_search_retries = 0;
     station->setType(MANAGER);
+
     station->setManager(NULL);
     mutex_no_manager.lock();
+    table->mutex_read.unlock();
+
     station->status = AWAKEN;
 
     if (table->table.empty()) {
