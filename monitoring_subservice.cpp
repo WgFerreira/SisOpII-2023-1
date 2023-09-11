@@ -36,7 +36,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
         if (participant.GetMacAddress() == station->GetMacAddress())
           continue;
 
-        if (participant.GetUpdate_request_retries() > 2 && participant.GetStatus() != ASLEEP)
+        if (participant.update_request_retries > 2 && participant.GetStatus() != ASLEEP)
         {
           if (station->debug)
             std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
@@ -64,7 +64,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
         operations.push_back(op);
 
         if (station->debug)
-          std::cout << "monitor: tentou " << participant.GetUpdate_request_retries() << " vezes" << std::endl;
+          std::cout << "monitor: tentou " << participant.update_request_retries << " vezes" << std::endl;
       }
 
       if (!operations.empty())
