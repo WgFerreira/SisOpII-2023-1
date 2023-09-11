@@ -35,7 +35,7 @@ void StationTable::insert(std::string key, Station item)
   this->mutex_write.lock();
   this->has_update = true;
   this->clock += 1;
-  this->table.insert_or_assign(key, item);
+  this->table.insert(std::pair(key, item));
   this->table[key].update_request_retries = 0;
   this->mutex_write.unlock();
 }

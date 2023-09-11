@@ -21,85 +21,79 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
             switch (msg.type)
             {
             case MessageType::MANAGER_ELECTION :
-                if (payload.GetMacAddress() != station->GetMacAddress())
+                /**
+                 * Se é o manager, então não houve falha e não é necessário eleger um manager novo
+                 * só responder com vitória
+                */
+                if (station->atomic_GetType() == MANAGER)
                 {
+                    if (station->debug)
+                        std::cout << "discovery: Manager recebeu mensagem de eleição" << std::endl;
+                    struct message victory_msg;
+                    victory_msg.address = msg.address;
+                    victory_msg.sequence = 0;
+                    victory_msg.type = ELECTION_VICTORY;
+                    victory_msg.payload = *station;
+
+                    send_queue->push(victory_msg);
+                    
                     /**
-                     * Se é o manager, então não houve falha e não é necessário eleger um manager novo
-                     * só responder com vitória
+                     * Se o remetente não é conhecido, então é precisa ser adicionada a tabela
                     */
-                    if (station->atomic_GetType() == MANAGER)
+                    struct table_operation op;
+                    op.operation = INSERT;
+                    op.key = payload.GetMacAddress();
+                    op.station = payload;
+
+                    manage_queue->push(op);
+                }
+                /**
+                 * Se é só um participante, talvez tenha que iniciar uma eleição
+                */
+                else {
+                    /**
+                     * Se o remetente é conhecido, houve uma falha
+                     * continua o processo de eleição 
+                    */
+                    if (table->has(payload.GetMacAddress()))
                     {
                         if (station->debug)
-                            std::cout << "discovery: Manager recebeu mensagem de eleição" << std::endl;
-                        struct message victory_msg;
-                        victory_msg.address = msg.address;
-                        victory_msg.sequence = 0;
-                        victory_msg.type = ELECTION_VICTORY;
-                        victory_msg.payload = *station;
-
-                        send_queue->push(victory_msg);
-                        
+                            std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
+                        station->atomic_SetManager(NULL);
+                        mutex_no_manager.unlock();
                         /**
-                         * Se o remetente não é conhecido, então é precisa ser adicionada a tabela
+                         * Se existem outras estação conhecidas com o pid mais alto, 
+                         * então responde e continua a eleição
                         */
-                        struct table_operation op;
-                        op.operation = INSERT;
-                        op.key = payload.GetMacAddress();
-                        op.station = payload;
-
-                        manage_queue->push(op);
-                    }
-                    /**
-                     * Se é só um participante, talvez tenha que iniciar uma eleição
-                    */
-                    else {
-                        /**
-                         * Se o remetente é conhecido, houve uma falha
-                         * continua o processo de eleição 
-                        */
-                        if (table->has(payload.GetMacAddress()))
+                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
                         {
-                            if (station->debug)
-                                std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
-                            station->atomic_SetManager(NULL);
-                            mutex_no_manager.unlock();
-                            /**
-                             * Se existem outras estação conhecidas com o pid mais alto, 
-                             * então responde e continua a eleição
-                            */
-                            if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
-                            {
-                                struct message answer_msg;
-                                answer_msg.address = msg.address;
-                                answer_msg.sequence = 0;
-                                answer_msg.type = ELECTION_ANSWER;
-                                answer_msg.payload = *station;
+                            struct message answer_msg;
+                            answer_msg.address = msg.address;
+                            answer_msg.sequence = 0;
+                            answer_msg.type = ELECTION_ANSWER;
+                            answer_msg.payload = *station;
 
-                                send_queue->push(answer_msg);
-                            }
-                            /**
-                             * Se essa é a estação com pid mais alto, 
-                             * é provavelmente o novo líder
-                            */
-                            else 
-                                election_victory(station, send_queue, table);
+                            send_queue->push(answer_msg);
                         }
+                        /**
+                         * Se essa é a estação com pid mais alto, 
+                         * é provavelmente o novo líder
+                        */
+                        else 
+                            election_victory(station, send_queue, table);
                     }
                 }
                 break;
                 
             case MessageType::ELECTION_ANSWER :
-                if (payload.GetMacAddress() != station->GetMacAddress())
-                {
-                    if (station->debug)
-                        std::cout << "discovery: Perdeu eleição" << std::endl;
-                    station->atomic_set([](Station* self) {
-                        self->SetType(PARTICIPANT);
-                        self->SetStatus(WAITING_ELECTION);
-                        self->SetLast_leader_search(now());
-                        self->SetLeader_search_retries(0);
-                    });
-                }
+                if (station->debug)
+                    std::cout << "discovery: Perdeu eleição" << std::endl;
+                station->atomic_set([](Station* self) {
+                    self->SetType(PARTICIPANT);
+                    self->SetStatus(WAITING_ELECTION);
+                    self->SetLast_leader_search(now());
+                    self->SetLeader_search_retries(0);
+                });
                 break;
                 
             case MessageType::ELECTION_VICTORY :
