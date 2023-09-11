@@ -114,7 +114,6 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     mutex_no_manager.lock();
                     table->mutex_read.unlock();
                 });
-
                 break;
 
             case MessageType::LEAVING :
@@ -275,8 +274,8 @@ void discovery::multicast_election(Station* station, MessageQueue *send_queue,
 
     table->mutex_write.lock();
     for (auto &s : table->getValues(filter_pid ? station->GetPid() : 0)) {
-        if (s.GetMacAddress() == station->GetMacAddress())
-            continue;
+        // if (s.GetMacAddress() == station->GetMacAddress())
+        //     continue;
 
         struct message election_msg;
         election_msg.address = s.getAddress();
