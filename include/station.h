@@ -95,6 +95,7 @@ public:
   u_int64_t GetUpdate_request_retries() const { return this->update_request_retries; }
   void      SetUpdate_request_retries(u_int64_t update_request_retries) { this->update_request_retries = update_request_retries; }
   void SetLast_update(u_int64_t last_update) { this->last_update = last_update; }
+  void SetManager(Station *manager) { this->manager = manager; }
   
   /**
    * USAR GET E SET atomico PARA A ESTAÇÃO ATUAL DO SISTEMA

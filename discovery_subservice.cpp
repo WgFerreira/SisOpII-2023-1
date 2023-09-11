@@ -110,7 +110,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     self->SetLast_leader_search(now());
                     self->SetLeader_search_retries(0);
                     self->SetLast_update(now());
-                    self->atomic_SetManager(&msg.payload);
+                    self->SetManager(&msg.payload);
                     mutex_no_manager.lock();
                     table->mutex_read.unlock();
                 });
