@@ -48,8 +48,6 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
       default:
         break;
       }
-      
-      table->mutex_write.unlock();
     }
 
     if (table->has_update)
@@ -57,9 +55,9 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
       table->mutex_read.unlock();
       if (station->debug)
         std::cout << "management: leitura da tabela liberada" << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      table->mutex_read.lock();
-      table->has_update = false;
+      // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      // table->mutex_read.lock();
+      // table->has_update = false;
     }
   }
   

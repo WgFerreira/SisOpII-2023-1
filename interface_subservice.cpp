@@ -63,6 +63,8 @@ void *interface::interface (Station* station, management::StationTable* table)
 			cout << "interface: table has update " << table->has_update << endl;
 		}
 		table->mutex_read.unlock();
+    table->mutex_read.lock();
+    table->has_update = false;
 	}
 	if (station->debug)
 		std::cout << "saindo interface" << std::endl;
