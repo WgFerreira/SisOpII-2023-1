@@ -5,6 +5,9 @@
 #include <ifaddrs.h>
 #include <linux/if.h>
 #include <sys/ioctl.h>
+#include <iomanip>
+
+using namespace std;
 
 void Station::init(InputParser *args)
 {
@@ -28,6 +31,53 @@ void Station::printStation()
     std::cout << "Hostname: " << this->hostname << std::endl;
     std::cout << "MAC Address: " << this->macAddress << std::endl;
     std::cout << "IP Address: " << this->ipAddress << std::endl << std::endl;
+}
+
+void Station::print_interface()
+{
+    std::string status = "";
+    switch (this->status)
+    {
+    case AWAKEN:
+        status = "AWAKEN";
+        break;
+
+    case ASLEEP:
+        status = "SLEEPING";
+        break;
+
+    case ELECTING:
+        status = "ELECTING";
+        break;
+    
+    default:
+        status = "UNKNOWN";
+    }
+
+    std::string type = "";
+    switch (this->getType())
+    {
+    case MANAGER:
+        type = " *";
+        break;
+    case CANDIDATE:
+        type = " ?";
+        break;
+    case PARTICIPANT:
+        type = " ";
+        break;
+    
+    default:
+        status = "##";
+    }
+    
+	const char separator = ' ';
+    std::cout << std::left << std::setw(3) << std::setfill(separator) << type;
+    std::cout << std::left << std::setw(30) << std::setfill(separator) << this->hostname;
+    std::cout << std::left << std::setw(20) << std::setfill(separator) << this->macAddress;
+    std::cout << std::left << std::setw(20) << std::setfill(separator) << this->ipAddress;
+    std::cout << std::left << std::setw(10) << std::setfill(separator) << status;
+    std::cout << std::endl;
 }
 
 void Station::findInterfaceName()

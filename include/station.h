@@ -68,6 +68,7 @@ public:
 
   void init(InputParser *args);
   void printStation();
+  void print_interface();
   struct station_serial serialize();
   static Station deserialize(struct station_serial serialized);
   struct sockaddr_in getSocketAddress(int port);

@@ -30,7 +30,7 @@ void *interface::interface (Station* station, management::StationTable* table)
 
 			cout << endl;
 			cout << endl;
-			cout << left << setw(2) << setfill(separator) << " ";
+			cout << left << setw(3) << setfill(separator) << " ";
 			cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
 			cout << left << setw(20) << setfill(separator) << "MAC ADDRESS";
 			cout << left << setw(20) << setfill(separator) << "IP ADDRESS";
@@ -39,52 +39,14 @@ void *interface::interface (Station* station, management::StationTable* table)
 			cout << "--------------------------------------------------------------------------------------------------------------";
 			cout << endl;
 			
-			string status = "";
-			if (station->status == AWAKEN)
-				status = "AWAKEN";
-			else
-				status = "ASLEEP";
-
-			string type = "";
-			if (station->getType() == MANAGER)
-				type = "*";
-			else if (station->getType() == CANDIDATE)
-				type = "?";
-			else
-				type = " ";
-			
-			cout << left << setw(2) << setfill(separator) << type;
-			cout << left << setw(nameWidth) << setfill(separator) << station->hostname;
-			cout << left << setw(20) << setfill(separator) << station->macAddress;
-			cout << left << setw(20) << setfill(separator) << station->ipAddress;
-			cout << left << setw(10) << setfill(separator) << status;
-			cout << endl;
+			station->print_interface();
 
 			for (auto &tupla : table->table)
 			{
 				Station s = tupla.second;
 				if (s.hostname.length() > 0)
 				{
-					string status = "";
-					if (s.status == AWAKEN)
-						status = "AWAKEN";
-					else
-						status = "ASLEEP";
-
-					string type = "";
-					if (s.getType() == MANAGER)
-						type = "*";
-					else if (s.getType() == CANDIDATE)
-						type = "?";
-					else
-						type = " ";
-					
-					cout << left << setw(2) << setfill(separator) << type;
-					cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
-					cout << left << setw(20) << setfill(separator) << s.macAddress;
-					cout << left << setw(20) << setfill(separator) << s.ipAddress;
-					cout << left << setw(10) << setfill(separator) << status;
-					cout << endl;
+					s.print_interface();
 				}
 			}
 		}
