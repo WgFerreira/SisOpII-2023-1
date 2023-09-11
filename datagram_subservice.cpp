@@ -82,6 +82,10 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
       }
       else {
         station_serial s = client_data.payload.s;
+
+        if (s.pid == station->GetPid())
+          continue;
+
         inet_ntop(AF_INET, &(client_addr.sin_addr), s.ipAddress, INET_ADDRSTRLEN);
         Station participant = Station::deserialize(s);
 
