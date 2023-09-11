@@ -13,65 +13,58 @@
 
 using namespace std;
 
-void *interface::interface (Station* station, management::StationTable* table)
+void *interface::interface (Station* station, StationTable* table)
 {
 	const char separator    = ' ';
 	const int nameWidth     = 30;
 
 	while(station->status != EXITING) 
 	{
-		if (table->mutex_read.try_lock())
+		table->mutex_read.lock();
+		if (!station->debug)
 		{
-			if (!station->debug)
+			struct winsize w;
+			ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+			system("clear");
+
+			cout << endl;
+			cout << endl;
+			cout << left << setw(3) << setfill(separator) << " ";
+			cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
+			cout << left << setw(20) << setfill(separator) << "MAC ADDRESS";
+			cout << left << setw(20) << setfill(separator) << "IP ADDRESS";
+			cout << left << setw(10) << setfill(separator) << "STATUS";
+			cout << endl;
+			cout << "--------------------------------------------------------------------------------------------------------------";
+			cout << endl;
+			
+			station->print_interface();
+
+			for (auto &tupla : table->table)
 			{
-				struct winsize w;
-				ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-				system("clear");
-
-				cout << endl;
-				cout << endl;
-				cout << left << setw(nameWidth) << setfill(separator) << "HOSTNAME";
-				cout << left << setw(nameWidth) << setfill(separator) << "MAC ADDRESS";
-				cout << left << setw(nameWidth) << setfill(separator) << "IP ADDRESS";
-				cout << left << setw(nameWidth) << setfill(separator) << "STATUS";
-				cout << endl;
-				cout << "--------------------------------------------------------------------------------------------------------------";
-				cout << endl;
-
-				for (auto &tupla : table->table)
+				Station s = tupla.second;
+				if (s.hostname.length() > 0)
 				{
-					Station s = tupla.second;
-					if (s.hostname.length() > 0)
-					{
-						string status = "";
-						if (s.status == AWAKEN)
-							status = "AWAKEN";
-						else
-							status = "ASLEEP";
-						
-						cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
-						cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
-						cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
-						cout << left << setw(nameWidth) << setfill(separator) << status;
-						cout << endl;
-					}
+					s.print_interface();
 				}
 			}
-			else 
-			{
-				// station->printStation();
-				cout << "interface: table has update " << table->has_update << endl;
-			}
-			table->mutex_read.unlock();
 		}
+		else 
+		{
+			// station->printStation();
+			cout << "interface: table has update " << table->has_update << endl;
+		}
+		table->mutex_read.unlock();
+    table->mutex_read.lock();
+    table->has_update = false;
 	}
 	if (station->debug)
 		std::cout << "saindo interface" << std::endl;
 	return 0;
 }
 
-void *interface::command (Station* station, management::StationTable* table) 
+void *interface::command (Station* station, StationTable* table) 
 {
 	string command_values[5];
 	
@@ -96,7 +89,7 @@ void *interface::command (Station* station, management::StationTable* table)
 				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
-					if (tupla.second.hostname.compare(command_values[1]))
+					if (tupla.second.hostname == command_values[1])
 					{
 						macAddress = tupla.second.macAddress;
 						break;
@@ -116,10 +109,11 @@ void *interface::command (Station* station, management::StationTable* table)
 		if (command_values[0].compare("EXIT") == 0)
 		{
 			station->status = EXITING;
+			end_all_threads_safely();
 		}
 		table->has_update = true;
 	}
 	if (station->debug)
-		std::cout << "saindo command" << std::endl;
+		std::cout << "command: saindo" << std::endl;
 	return 0;
 }

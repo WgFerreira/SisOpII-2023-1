@@ -3,25 +3,14 @@
 
 #include <list>
 #include <mutex>
-#include "sleep_server.h"
+#include "queue.h"
+#include "station.h"
+#include "station_table.h"
 
 namespace datagram {
 
   const int PORT = 50000;
-
-  enum MessageType: unsigned short
-  {
-    // Identifica qual subserviço recebe a mensagem
-    DISCOVERY, 
-    MONITORING,
-    // Identifica o que a mensagem é
-    MANAGER_ELECTION,
-    ELECTION_ANSWER,
-    ELECTION_VICTORY,
-    STATUS_REQUEST,
-    STATUS_RESPONSE,
-    LEAVING
-  };
+  const int REPLICATE_PORT = 50050;
 
   struct packet
   {
@@ -41,52 +30,36 @@ namespace datagram {
     unsigned short seqn; //Número de sequência
     unsigned short length; //Comprimento do payload
     unsigned long timestamp; // Timestamp do dado
-    // monitoring::station_table_serial station_table;
+    station_table_serial station_table;
     char _payload[255]; //Dados da mensagem
   };
 
-  struct message
-  {
-    in_addr_t address;
-    MessageType type;
-    Station payload;
-    short sequence;
-  };
-
-  class DatagramQueue
-  {
-  public:
-    std::mutex mutex_sending;
-    std::list<struct message> sending_queue;
-
-    std::mutex mutex_discovery;
-    std::list<struct message> discovery_queue;
-
-    std::mutex mutex_monitoring;
-    std::list<struct message> monitoring_queue;
-
-    std::mutex mutex_sync;
-    std::list<struct message> sync_queue;
-  };
-  
   /**
    * Cria um pacote de dados para ser enviado
   */
   struct packet create_packet(MessageType type, short sequence,
       struct station_serial payload);
+      
+  struct table_packet create_replicate_packet(MessageType type, short sequence,
+      struct station_table_serial payload);
 
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);
+  struct sockaddr_in socket_replicate_address(in_addr_t addr);
 
   /**
    * Thread que envia mensagens UDP na rede 
   */
-  void *sender(Station *station, DatagramQueue *datagram_queue);
+  void *sender(Station *station, MessageQueue *send_queue);
+  
+  void *replicate_sender(Station *station, ReplicateMessageQueue *send_replicate_queue);
 
   /**
    * Thread que recebe mensagens UDP da rede 
   */
-  void *receiver(Station *station, DatagramQueue *datagram_queue);
+  void *receiver(Station *station, MessageQueue *discovery_queue, MessageQueue *monitor_queue);
+  
+  void *replicate_receiver(Station *station, ReplicateMessageQueue *replicate_queue);
 }
 
 #endif
