@@ -27,6 +27,23 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
       if (n < 0) 
         std::cout << "ERROR sending message" << std::endl;
     }
+
+    if (!datagram_queue->sending_replicate_queue.empty() && datagram_queue->mutex_replicate_sending.try_lock())
+    {
+      struct replicate_message msg = datagram_queue->sending_replicate_queue.front();
+      datagram_queue->sending_replicate_queue.pop_front();
+      datagram_queue->mutex_replicate_sending.unlock();
+
+      struct sockaddr_in sock_addr = socket_address(msg.address);
+      struct table_packet data = create_replicate_packet(msg.type, 0, msg.payload->serialize());
+
+      if (station->debug)
+        std::cout << "sending a message" << std::endl;
+
+      int n = sendto(sockfd, &data, sizeof(data), 0, (const struct sockaddr *) &sock_addr, sizeof(struct sockaddr_in));
+      if (n < 0) 
+        std::cout << "ERROR sending message" << std::endl;
+    }
   }
   
   close(sockfd);
@@ -45,6 +62,7 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
   {
     struct sockaddr_in client_addr;
     struct packet client_data;
+    struct table_packet client_replicate_data;
     socklen_t client_addr_len = sizeof(struct sockaddr_in);
 
     int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
@@ -80,6 +98,27 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
           datagram_queue->mutex_monitoring.unlock();
       }
     }
+
+    n = recvfrom(sockfd, &client_replicate_data, sizeof(struct table_packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
+    if (n > 0)
+    {   
+      if (station->debug)
+        std::cout << "a message was received" << std::endl;
+
+      /*StationTable participant =*/ 
+      StationTable station_table;
+      station_table.deserialize(client_replicate_data.station_table);
+      /*
+      struct replicate_message msg;
+      msg.type = client_replicate_data.type;
+      msg.address = client_addr.sin_addr.s_addr;
+      msg.payload = participant;
+      msg.sequence = client_replicate_data.seqn;
+
+      datagram_queue->mutex_replicate.lock();
+      datagram_queue->replicate_queue.push_back(msg);
+      datagram_queue->mutex_replicate.unlock();*/
+    }
   }
 
   close(sockfd);
@@ -100,6 +139,20 @@ struct packet datagram::create_packet(MessageType type, short sequence,
       std::chrono::system_clock::now().time_since_epoch() ).count();
   packet.length = sizeof(payload);
   packet.station = payload;
+  return packet;
+}
+
+struct table_packet datagram::create_replicate_packet(MessageType type, short sequence, 
+    struct station_table_serial payload)
+{
+  struct table_packet packet;
+  packet.subservice = REPLICATE;
+  packet.type = type;
+  packet.seqn = sequence;
+  packet.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::system_clock::now().time_since_epoch() ).count();
+  packet.length = sizeof(payload);
+  packet.station_table = payload;
   return packet;
 }
 

@@ -1,11 +1,11 @@
 #ifndef _MANAGEMENT_H
 #define _MANAGEMENT_H
 
-#include "datagram_subservice.h"
 #include <map>
 #include <list>
 
 #include "sleep_server.h"
+#include "datagram_subservice.h"
 
 namespace management {
   
@@ -24,7 +24,7 @@ namespace management {
     Station station;
     StationStatus new_status;
   };
-
+/*
   class StationTable
   {
   public:
@@ -42,20 +42,20 @@ namespace management {
     }
 
     struct station_table_serial &serialize();
-    void deserialize(StationTable *table, struct station_table_serial serialized);
+    void deserialize(struct station_table_serial serialized);
     std::list<Station> getValues(unsigned int pid);
     bool has(std::string key);
   };
-
+*/
   /**
    * Struct para enviar no pacote
-  */
+  *//*
   struct station_table_serial
   {
     unsigned long clock;
     unsigned int count;
     struct station_serial table[100];
-  };
+  };*/
 
   class ManagementQueue
   {

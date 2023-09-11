@@ -4,6 +4,7 @@
 #include <list>
 #include <mutex>
 #include "sleep_server.h"
+//#include "management_subservice.h"
 
 namespace datagram {
 
@@ -20,7 +21,8 @@ namespace datagram {
     ELECTION_VICTORY,
     STATUS_REQUEST,
     STATUS_RESPONSE,
-    LEAVING
+    LEAVING,
+    REPLICATE
   };
 
   struct packet
@@ -41,7 +43,7 @@ namespace datagram {
     unsigned short seqn; //Número de sequência
     unsigned short length; //Comprimento do payload
     unsigned long timestamp; // Timestamp do dado
-    // monitoring::station_table_serial station_table;
+    struct station_table_serial station_table;
     char _payload[255]; //Dados da mensagem
   };
 
@@ -50,6 +52,14 @@ namespace datagram {
     in_addr_t address;
     MessageType type;
     Station payload;
+    short sequence;
+  };
+
+  struct replicate_message
+  {
+    in_addr_t address;
+    MessageType type;
+    StationTable *payload;
     short sequence;
   };
 
@@ -67,6 +77,14 @@ namespace datagram {
 
     std::mutex mutex_sync;
     std::list<struct message> sync_queue;
+
+    std::mutex mutex_replicate_sending;
+    std::list<struct replicate_message> sending_replicate_queue;
+
+    std::mutex mutex_replicate;
+    std::list<struct replicate_message> replicate_queue;
+    
+    std::mutex mutex_replicate_read;
   };
   
   /**
@@ -74,6 +92,9 @@ namespace datagram {
   */
   struct packet create_packet(MessageType type, short sequence,
       struct station_serial payload);
+
+  struct table_packet create_replicate_packet(MessageType type, short sequence, 
+      struct station_table_serial payload);
 
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);

@@ -8,6 +8,7 @@
 #include <semaphore>
 #include <mutex>
 #include <list>
+#include <map>
 
 #include "input_parser.h"
 
@@ -77,6 +78,28 @@ public:
     unsigned int getPid() { return this->pid; }
 };
 
+class StationTable
+{
+public:
+  unsigned long clock;
+  std::mutex mutex_write;
+  std::mutex mutex_read;
+  bool has_update;
+  std::map<std::string,Station> table;
+
+  StationTable()
+  {   
+    this->clock = 0;
+    this->has_update = false;
+    this->mutex_read.lock();
+  }
+
+  struct station_table_serial &serialize();
+  void deserialize(struct station_table_serial serialized);
+  std::list<Station> getValues(unsigned int pid);
+  bool has(std::string key);
+};
+
 /**
  * Struct para enviar no pacote
 */
@@ -88,6 +111,16 @@ struct station_serial
     char macAddress[MAC_ADDRESS_MAX];
     StationStatus status;
     StationType type;
+};
+
+/**
+ * Struct para enviar no pacote
+*/
+struct station_table_serial
+{
+  unsigned long clock;
+  unsigned int count;
+  struct station_serial table[100];
 };
 
 

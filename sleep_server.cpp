@@ -11,12 +11,14 @@
 #include <arpa/inet.h>
 #include <semaphore>
 #include <list>
+#include <cmath>
 
 // Subservices
 #include "include/discovery_subservice.h"
 // #include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
+#include "include/replicate_subservice.h"
 #include "include/input_parser.h"
 #include "include/sleep_server.h"
 
@@ -31,7 +33,7 @@ int main(int argc, const char *argv[]) {
 
     delete args;
 
-    auto *stationTable = new management::StationTable();
+    auto *stationTable = new StationTable();
 
     auto *datagram = new datagram::DatagramQueue();
     auto *management = new management::ManagementQueue();
@@ -42,6 +44,7 @@ int main(int argc, const char *argv[]) {
     auto th_management = std::thread(&management::manage, station, management, stationTable, datagram);
     auto th_interface = std::thread(&interface::interface, station, stationTable);
     auto th_command = std::thread(&interface::command, station, stationTable);
+    auto th_replicate = std::thread(&replicate::replicate, station, datagram, stationTable);
 
     th_sender.join();
     th_receiver.join();
@@ -49,6 +52,7 @@ int main(int argc, const char *argv[]) {
     th_management.join();
     th_interface.join();
     th_command.join();
+    th_replicate.join();
 
     return 0;
 }
@@ -164,4 +168,69 @@ uint64_t now()
 uint64_t millis_since(u_int64_t then)
 {
     return now() - then;
+}
+
+std::list<Station> StationTable::getValues(unsigned int pid) 
+{
+  std::list<Station> list;
+
+  this->mutex_write.lock();
+  for (auto &p : this->table)
+    list.push_back(p.second);
+  this->mutex_write.unlock();
+
+  list.remove_if([&](Station &station) { return station.getPid() <= pid; });
+  return list;
+}
+
+bool StationTable::has(std::string key) 
+{
+  this->mutex_write.lock();
+  bool found_key = this->table.find(key) != this->table.end();
+  this->mutex_write.unlock();
+  return found_key;
+}
+
+
+struct station_table_serial &StationTable::serialize()
+{
+   /*unsigned long count = this->table.size();
+   unsigned long size = (int)ceil(count/100);
+
+   struct station_table_serial serialized[size];
+
+   for (int i = 0; i < size; i++)
+   {
+     struct station_table_serial *t;
+
+     t->clock = this->clock;
+     t->count = this->table.size();
+     t->table = new (struct station_serial[t->count]);
+   }*/
+   
+   struct station_table_serial *serialized;
+
+   serialized->clock = this->clock;
+   serialized->count = this->table.size();
+   //serialized->table = NULL;
+
+   for (int i = 0; i < this->table.size(); i++)
+   {
+     struct station_serial *ss = new (struct station_serial);
+     serialized->table[i] = *ss;
+   }
+  
+   return *serialized;
+}
+
+void StationTable::deserialize(station_table_serial serialized)
+{
+   this->clock = serialized.clock;
+   this->table.clear();
+   for (unsigned int i = 0; i < serialized.count; i++)
+   {
+     auto station = Station::deserialize(serialized.table[i]);
+
+     this->table.insert(std::pair<std::string,Station>(station.macAddress, station));
+   }
 }

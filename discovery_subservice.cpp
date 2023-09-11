@@ -11,7 +11,7 @@
 using namespace datagram;
 using namespace management;
 
-void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue, management::StationTable *table)
+void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_queue, management::ManagementQueue *manage_queue, StationTable *table)
 {
     while (station->status != EXITING)
     {
@@ -170,7 +170,7 @@ void *discovery::discovery (Station* station, datagram::DatagramQueue *datagram_
     return 0;
 }
 
-void discovery::bully_algorithm(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
+void discovery::bully_algorithm(Station* station, datagram::DatagramQueue *datagram_queue, StationTable *table)
 {
     /**
      * Se não tem manager, inicia eleição
@@ -192,7 +192,7 @@ void discovery::bully_algorithm(Station* station, datagram::DatagramQueue *datag
         station->status = ELECTING;
 }
 
-void discovery::leader_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
+void discovery::leader_election(Station* station, datagram::DatagramQueue *datagram_queue, StationTable *table)
 {
     /**
      * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
@@ -236,7 +236,7 @@ void discovery::leader_election(Station* station, datagram::DatagramQueue *datag
     }
 }
 
-void discovery::multicast_election(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table, datagram::MessageType type, bool filter_pid)
+void discovery::multicast_election(Station* station, datagram::DatagramQueue *datagram_queue, StationTable *table, datagram::MessageType type, bool filter_pid)
 {
     std::list<struct message> messages;
 
@@ -260,7 +260,7 @@ void discovery::multicast_election(Station* station, datagram::DatagramQueue *da
     datagram_queue->mutex_sending.unlock();
 }
 
-void discovery::election_victory(Station* station, datagram::DatagramQueue *datagram_queue, management::StationTable *table)
+void discovery::election_victory(Station* station, datagram::DatagramQueue *datagram_queue, StationTable *table)
 {
     station->last_leader_search = now();
     station->leader_search_retries = 0;
