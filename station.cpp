@@ -55,7 +55,7 @@ void Station::print_interface()
     }
 
     std::string type = "";
-    switch (this->getType())
+    switch (this->type)
     {
     case MANAGER:
         type = " *";
@@ -157,4 +157,81 @@ struct sockaddr_in Station::getSocketAddress(int port)
 in_addr_t Station::getAddress()
 {
     return inet_addr(this->ipAddress.c_str());
+}
+
+auto Station::atomic_get(auto &&callback)
+{
+  mutex_station.lock();
+  auto response = callback(this);
+  mutex_station.unlock();
+  return response;
+}
+
+void Station::atomic_set(std::function<void(Station *)> callback)
+{
+  mutex_station.lock();
+  callback(this);
+  mutex_station.unlock();
+}
+
+StationType Station::atomic_GetType() {
+  return atomic_get([&](Station *self) {return self->type;});
+}
+void Station::atomic_SetType(StationType type) {
+  atomic_set([&](Station *self) {self->type = type;});
+}
+
+Station *Station::atomic_GetManager() {
+  return atomic_get([&](Station *self) {return self->manager;});
+}
+void Station::atomic_SetManager(Station *manager) {
+  atomic_set([&](Station *self) {self->manager = manager;});
+}
+
+StationStatus Station::atomic_GetStatus() {
+  return atomic_get([&](Station *self) {return self->status;});
+}
+
+void          Station::atomic_SetStatus(StationStatus status) {
+  atomic_set([&](Station *self) {self->status = status;});
+}
+
+int   Station::atomic_GetLeader_search_retries() {
+  return atomic_get([&](Station *self) {return self->leader_search_retries;});
+}
+
+void  Station::atomic_SetLeader_search_retries(int leader_search_retries) {
+  atomic_set([&](Station *self) {self->leader_search_retries = leader_search_retries;});
+}
+
+u_int64_t Station::atomic_GetLast_leader_search() {
+  return atomic_get([&](Station *self) {return self->last_leader_search;});
+}
+
+void      Station::atomic_SetLast_leader_search(u_int64_t last_leader_search) {
+  atomic_set([&](Station *self) {self->last_leader_search = last_leader_search;});
+}
+
+u_int64_t Station::atomic_GetElection_timeout() {
+  return atomic_get([&](Station *self) {return self->election_timeout;});
+}
+
+void      Station::atomic_SetElection_timeout(u_int64_t election_timeout) {
+  atomic_set([&](Station *self) {self->election_timeout = election_timeout;});
+}
+
+u_int64_t Station::atomic_GetLast_update() {
+  return atomic_get([&](Station *self) {return self->last_update;});
+}
+
+void      Station::atomic_SetLast_update(u_int64_t last_update) {
+  atomic_set([&](Station *self) {self->last_update = last_update;});
+}
+
+u_int64_t Station::atomic_GetMonitor_interval() {
+  return atomic_get([&](Station *self) {return self->monitor_interval;});
+}
+
+void      Station::atomic_SetMonitor_interval(u_int64_t monitor_interval) {
+  atomic_set([&](Station *self) {self->monitor_interval = monitor_interval;});
 }

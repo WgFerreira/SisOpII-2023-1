@@ -14,7 +14,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         management::StationTable *table)
 {
     discovery_queue->mutex_read.lock();
-    while (station->status != EXITING)
+    while (station->atomic_GetStatus() != EXITING)
     {
         discovery_queue->mutex_read.lock();
         /**
@@ -30,7 +30,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                  * Se é o manager, então não houve falha e não é necessário eleger um manager novo
                  * só responder com vitória
                 */
-                if (station->getType() == MANAGER)
+                if (station->atomic_GetType() == MANAGER)
                 {
                     if (station->debug)
                         std::cout << "discovery: Manager recebeu mensagem de eleição" << std::endl;
@@ -47,7 +47,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     */
                     struct table_operation op;
                     op.operation = INSERT;
-                    op.key = msg.payload.macAddress;
+                    op.key = msg.payload.GetMacAddress();
                     op.station = msg.payload;
 
                     manage_queue->push(op);
@@ -60,17 +60,17 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se o remetente é conhecido, houve uma falha
                      * continua o processo de eleição 
                     */
-                    if (table->has(msg.payload.macAddress))
+                    if (table->has(msg.payload.GetMacAddress()))
                     {
                         if (station->debug)
                             std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
-                        station->setManager(NULL);
+                        station->atomic_SetManager(NULL);
                         mutex_no_manager.unlock();
                         /**
                          * Se existem outras estação conhecidas com o pid mais alto, 
                          * então responde e continua a eleição
                         */
-                        if (table->getValues(station->getPid()).size() > 0 || station->getPid() > msg.payload.getPid()) 
+                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > msg.payload.GetPid()) 
                         {
                             struct message answer_msg;
                             answer_msg.address = msg.address;
@@ -93,35 +93,39 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
             case MessageType::ELECTION_ANSWER :
                 if (station->debug)
                     std::cout << "discovery: Perdeu eleição" << std::endl;
-                station->setType(PARTICIPANT);
-                station->status = WAITING_ELECTION;
-                station->last_leader_search = now();
-                station->leader_search_retries = 0;
+                station->atomic_set([](Station* self) {
+                    self->SetType(PARTICIPANT);
+                    self->SetStatus(WAITING_ELECTION);
+                    self->SetLast_leader_search(now());
+                    self->SetLeader_search_retries(0);
+                });
                 break;
                 
             case MessageType::ELECTION_VICTORY :
                 if (station->debug)
                     std::cout << "discovery: Novo Manager Recebido" << std::endl;
-                station->setType(PARTICIPANT);
-                station->status = AWAKEN;
-                station->last_leader_search = now();
-                station->leader_search_retries = 0;
+                station->atomic_set([](Station* self) {
+                    self->SetType(PARTICIPANT);
+                    self->SetStatus(AWAKEN);
+                    self->SetLast_leader_search(now());
+                    self->SetLeader_search_retries(0);
+                    self->SetLast_update(now());
+                });
 
-                station->setManager(&msg.payload);
+                station->atomic_SetManager(&msg.payload);
                 mutex_no_manager.lock();
                 table->mutex_read.unlock();
 
-                station->last_update = now();
                 break;
 
             case MessageType::LEAVING :
-                if (station->getType() == MANAGER)
+                if (station->atomic_GetType() == MANAGER)
                 {
                     if (station->debug)
                         std::cout << "discovery: Uma estação está saindo da rede" << std::endl;
                     table_operation op;
                     op.operation = DELETE;
-                    op.key = msg.payload.macAddress;
+                    op.key = msg.payload.GetMacAddress();
 
                     manage_queue->push(op);
                 }
@@ -129,8 +133,8 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 {
                     if (station->debug)
                         std::cout << "discovery: O Manager está saindo da rede" << std::endl;
-                    if (msg.payload.macAddress == station->getManager()->macAddress) {
-                        station->setManager(NULL);
+                    if (msg.payload.GetMacAddress() == station->atomic_GetManager()->GetMacAddress()) {
+                        station->atomic_SetManager(NULL);
                         mutex_no_manager.unlock();
                     }
                 }
@@ -157,28 +161,30 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
 
 void *discovery::election(Station* station, MessageQueue *send_queue, management::StationTable *table)
 {
-    while (station->status != EXITING)
+    while (station->atomic_GetStatus() != EXITING)
     {
         mutex_no_manager.lock();
         mutex_no_manager.unlock();
         /**
          * Se não tem manager, inicia eleição
         */
-        if (station->getType() != MANAGER && station->getManager() == NULL)
-            station->status = ELECTING;
+        if (station->atomic_GetType() != MANAGER && station->atomic_GetManager() == NULL)
+            station->atomic_SetStatus(ELECTING);
 
         /**
          * Se está em eleição e ainda não tem resposta, tenta de novo 
          *  ou termina a eleição com vitória
         */
-        if (station->status == ELECTING && millis_since(station->last_leader_search) > station->election_timeout)
+        uint64_t timeout = station->atomic_GetElection_timeout();
+        uint64_t last_search = station->atomic_GetLast_leader_search();
+        if (station->atomic_GetStatus() == ELECTING && millis_since(last_search) > timeout)
             leader_election(station, send_queue, table);
 
         /**
          * Se já perdeu a eleição, mas ainda nao tem resposta, inicia a eleição de novo
         */
-        if (station->status == WAITING_ELECTION && millis_since(station->last_leader_search) > station->election_timeout)
-            station->status = ELECTING;
+        if (station->atomic_GetStatus() == WAITING_ELECTION && millis_since(last_search) > timeout)
+            station->atomic_SetStatus(ELECTING);
     }
 
     if (station->debug)
@@ -191,7 +197,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, mana
     /**
      * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
     */
-    if (station->leader_search_retries >= 2)
+    if (station->atomic_GetLeader_search_retries() >= 2)
     {
         if (station->debug)
             std::cout << "discovery: Nenhuma Reposta na Eleição" << std::endl;
@@ -203,7 +209,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, mana
     else {
         if (station->debug)
             std::cout << "discovery: Iniciando Eleição" << std::endl;
-        station->setType(CANDIDATE);
+        station->atomic_SetType(CANDIDATE);
 
         if (table->table.empty()) {
             if (station->debug)
@@ -221,24 +227,27 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, mana
                 std::cout << "discovery: Multicasting eleição" << std::endl;
             multicast_election(station, send_queue, table, MANAGER_ELECTION, true);
         }
-            
-        station->last_leader_search = now();
-        station->leader_search_retries += 1;
-        station->status = ELECTING;
+        
+        station->atomic_set([](Station *self) {
+            self->SetLast_leader_search(now());
+            self->SetLeader_search_retries(self->GetLeader_search_retries() + 1);
+            self->SetStatus(ELECTING);
+        });
     }
 }
 
 void discovery::election_victory(Station* station, MessageQueue *send_queue, management::StationTable *table)
 {
-    station->last_leader_search = now();
-    station->leader_search_retries = 0;
-    station->setType(MANAGER);
+    station->atomic_set([](Station *self) {
+        self->SetLast_leader_search(now());
+        self->SetLeader_search_retries(0);
+        self->SetType(MANAGER);
+        self->SetStatus(AWAKEN);
+    });
 
-    station->setManager(NULL);
+    station->atomic_SetManager(NULL);
     mutex_no_manager.lock();
     table->mutex_read.unlock();
-
-    station->status = AWAKEN;
 
     if (table->table.empty()) {
         if (station->debug)
@@ -265,8 +274,8 @@ void discovery::multicast_election(Station* station, MessageQueue *send_queue,
     std::list<struct message> messages;
 
     table->mutex_write.lock();
-    for (auto &s : table->getValues(filter_pid ? station->getPid() : 0)) {
-        if (s.getAddress() == station->getAddress())
+    for (auto &s : table->getValues(filter_pid ? station->GetPid() : 0)) {
+        if (s.GetMacAddress() == station->GetMacAddress())
             continue;
 
         struct message election_msg;

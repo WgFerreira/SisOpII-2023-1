@@ -22,6 +22,7 @@
 #include "include/station.h"
 
 std::mutex mutex_no_manager;
+std::mutex mutex_station;
 
 auto *send_queue = new MessageQueue();
 auto *discovery_queue = new MessageQueue();
@@ -87,7 +88,7 @@ void end_all_threads_safely()
     
     discovery_queue->mutex_read.unlock();
     monitor_queue->mutex_read.unlock();
-    
+
     stationTable->has_update = true;
     manage_queue->mutex_read.unlock();
 }

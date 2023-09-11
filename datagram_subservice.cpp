@@ -55,7 +55,7 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
   if (bind(sockfd, (struct sockaddr *) &bound_addr, sizeof(struct sockaddr)) < 0) 
       std::cerr << "ERROR binding socket" << std::endl;
 
-  while (station->status != EXITING)
+  while (station->atomic_GetStatus() != EXITING)
   {
     struct sockaddr_in client_addr;
     struct packet client_data;
@@ -64,7 +64,7 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
     int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
     if (n > 0)
     {
-      if (client_data.station.pid == station->getPid())
+      if (client_data.station.pid == station->GetPid())
         continue;
         
       inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);

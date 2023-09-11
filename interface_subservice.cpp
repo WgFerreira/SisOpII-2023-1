@@ -18,7 +18,7 @@ void *interface::interface (Station* station, management::StationTable* table)
 	const char separator    = ' ';
 	const int nameWidth     = 30;
 
-	while(station->status != EXITING) 
+	while(station->atomic_GetStatus() != EXITING) 
 	{
 		table->mutex_read.lock();
 		if (!station->debug)
@@ -44,10 +44,7 @@ void *interface::interface (Station* station, management::StationTable* table)
 			for (auto &tupla : table->table)
 			{
 				Station s = tupla.second;
-				if (s.hostname.length() > 0)
-				{
-					s.print_interface();
-				}
+				s.print_interface();
 			}
 		}
 		else 
@@ -68,7 +65,7 @@ void *interface::command (Station* station, management::StationTable* table)
 {
 	string command_values[5];
 	
-	while(station->status != EXITING) {
+	while(station->atomic_GetStatus() != EXITING) {
 		string command;
 		getline(cin, command);
 		
@@ -81,7 +78,7 @@ void *interface::command (Station* station, management::StationTable* table)
 			pointer++;
 		}
 		
-		if (station->getType() == StationType::MANAGER) 
+		if (station->atomic_GetType() == StationType::MANAGER) 
 		{
 			if (command_values[0].compare("wakeup") == 0) 
 			{
@@ -89,9 +86,9 @@ void *interface::command (Station* station, management::StationTable* table)
 				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
-					if (tupla.second.hostname.compare(command_values[1]))
+					if (tupla.second.GetHostname().compare(command_values[1]))
 					{
-						macAddress = tupla.second.macAddress;
+						macAddress = tupla.second.GetMacAddress();
 						break;
 					}
 				}
@@ -108,7 +105,7 @@ void *interface::command (Station* station, management::StationTable* table)
 		
 		if (command_values[0].compare("EXIT") == 0)
 		{
-			station->status = EXITING;
+			station->atomic_SetStatus(EXITING);
 			end_all_threads_safely();
 		}
 		table->has_update = true;

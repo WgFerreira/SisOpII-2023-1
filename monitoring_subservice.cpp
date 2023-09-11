@@ -18,12 +18,12 @@ using namespace management;
 void *monitoring::monitor_request (Station* station, MessageQueue *send_queue, 
     OperationQueue *manage_queue, management::StationTable *table)
 {
-  while (station->status != EXITING)
+  while (station->atomic_GetStatus() != EXITING)
   {
     /**
      * Envia mensagem de monitoramento
      */
-    if (station->getType() == MANAGER)
+    if (station->atomic_GetType() == MANAGER)
     {
       std::list<message> messages;
       std::list<table_operation> operations;
@@ -33,18 +33,18 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
       {
         if (station->debug)
           std::cout << "monitor: " << list.size() << " participantes para monitorar" << std::endl;
-        if (participant.macAddress == station->macAddress)
+        if (participant.GetMacAddress() == station->GetMacAddress())
           continue;
 
-        if (participant.update_request_retries > 2 && participant.status != ASLEEP)
+        if (participant.GetUpdate_request_retries() > 2 && participant.GetStatus() != ASLEEP)
         {
           if (station->debug)
             std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
           table_operation op;
           op.operation = TableOperation::UPDATE_STATUS;
-          op.key = participant.macAddress;
+          op.key = participant.GetMacAddress();
           op.new_status = ASLEEP;
-          op.new_type = participant.getType();
+          op.new_type = participant.GetType();
 
           operations.push_back(op);
         }
@@ -59,12 +59,12 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
 
         table_operation op;
         op.operation = TableOperation::UPDATE_RETRY;
-        op.key = participant.macAddress;
+        op.key = participant.GetMacAddress();
 
         operations.push_back(op);
 
         if (station->debug)
-          std::cout << "monitor: tentou " << participant.update_request_retries << " vezes" << std::endl;
+          std::cout << "monitor: tentou " << participant.GetUpdate_request_retries() << " vezes" << std::endl;
       }
 
       if (!operations.empty())
@@ -85,19 +85,20 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
     /**
      * Monitora o Manager
     */
-    if (station->getType() == PARTICIPANT && station->getManager() != NULL)
+    auto interval = station->atomic_GetMonitor_interval();
+    if (station->atomic_GetType() == PARTICIPANT && station->atomic_GetManager() != NULL)
     {
-      auto millis_update = millis_since(station->last_update);
-      if (millis_update >= station->monitor_interval*1.5)
+      auto millis_update = millis_since(station->atomic_GetLast_update());
+      if (millis_update >= interval*1.5)
       {
         if (station->debug)
           std::cout << "monitor: Manager parou de requisitar status a " << millis_update << " ms" << std::endl;
-        station->setManager(NULL);
+        station->atomic_SetManager(NULL);
         mutex_no_manager.unlock();
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(station->monitor_interval));
+    std::this_thread::sleep_for(std::chrono::milliseconds(interval));
   }
 
   if (station->debug)
@@ -109,7 +110,7 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
     MessageQueue *monitor_queue, OperationQueue *manage_queue)
 {
   monitor_queue->mutex_read.lock();
-  while (station->status != EXITING)
+  while (station->atomic_GetStatus() != EXITING)
   {
     monitor_queue->mutex_read.lock();
     /**
@@ -132,20 +133,20 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
 
         send_queue->push(response_msg);
 
-        station->last_update = now();
+        station->atomic_SetLast_update(now());
       }
         break;
         
       case MessageType::STATUS_RESPONSE :
-        if (station->getType() == MANAGER)
+        if (station->atomic_GetType() == MANAGER)
         {
           if (station->debug)
             std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
           table_operation op;
           op.operation = TableOperation::UPDATE_STATUS;
-          op.key = msg.payload.macAddress;
-          op.new_status = msg.payload.status;
-          op.new_type = msg.payload.getType();
+          op.key = msg.payload.GetMacAddress();
+          op.new_status = msg.payload.GetStatus();
+          op.new_type = msg.payload.GetType();
 
           manage_queue->push(op);
         }

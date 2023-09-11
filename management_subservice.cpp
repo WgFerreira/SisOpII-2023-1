@@ -15,7 +15,7 @@ using namespace management;
 void *management::manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue) 
 {
   manage_queue->mutex_read.lock();
-  while(station->status != EXITING) 
+  while(station->atomic_GetStatus() != EXITING) 
   {
     manage_queue->mutex_read.lock();
     while (!manage_queue->queue.empty())
@@ -81,7 +81,7 @@ std::list<Station> management::StationTable::getValues(unsigned int pid)
     list.push_back(p.second);
   this->mutex_write.unlock();
 
-  list.remove_if([&](Station &station) { return station.getPid() <= pid; });
+  list.remove_if([&](Station &station) { return station.GetPid() <= pid; });
   return list;
 }
 
@@ -99,8 +99,7 @@ void management::StationTable::insert(std::string key, Station item)
   this->has_update = true;
   this->clock += 1;
   this->table.insert(std::pair<std::string,Station>(key, item));
-  this->table[key].last_update = now();
-  this->table[key].update_request_retries = 0;
+  this->table[key].SetUpdate_request_retries(0);
   this->mutex_write.unlock();
 }
 
@@ -123,10 +122,9 @@ void management::StationTable::update(std::string key, StationStatus new_status,
     this->mutex_write.lock();
     this->has_update = true;
     this->clock += 1;
-    this->table[key].status = new_status;
-    this->table[key].setType(new_type);
-    this->table[key].last_update = now();
-    this->table[key].update_request_retries = 0;
+    this->table[key].SetStatus(new_status);
+    this->table[key].SetType(new_type);
+    this->table[key].SetUpdate_request_retries(0);
     this->mutex_write.unlock();
   }
 }
@@ -136,7 +134,7 @@ void management::StationTable::retry(std::string key)
   if (this->has(key))
   {
     this->mutex_write.lock();
-    this->table[key].update_request_retries += 1;
+    this->table[key].SetUpdate_request_retries(this->table[key].GetUpdate_request_retries() + 1);
     this->mutex_write.unlock();
   }
 }
