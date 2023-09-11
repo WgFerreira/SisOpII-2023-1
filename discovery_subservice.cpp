@@ -254,7 +254,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, man
     mutex_no_manager.lock();
     table->mutex_read.unlock();
 
-    if (table->table.empty()) {
+    if (table->table.size() <= 1) {
         if (station->debug)
             std::cout << "discovery: Broadcasting vitória" << std::endl;
         struct message victory_msg;
