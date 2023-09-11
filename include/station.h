@@ -54,7 +54,6 @@ private:
   int leader_search_retries; 
 
   u_int64_t last_update;
-  u_int64_t update_request_retries;
 
   u_int64_t election_timeout = 500;
   u_int64_t monitor_interval = 1000;
@@ -63,6 +62,7 @@ private:
   void findMacAddress();
     
 public:
+  u_int64_t update_request_retries;
   bool debug = false;
 
   Station()

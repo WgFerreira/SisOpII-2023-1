@@ -124,7 +124,7 @@ void management::StationTable::update(std::string key, StationStatus new_status,
     this->clock += 1;
     this->table[key].SetStatus(new_status);
     this->table[key].SetType(new_type);
-    this->table[key].SetUpdate_request_retries(0);
+    this->table[key].update_request_retries = 0;
     this->mutex_write.unlock();
   }
 }
@@ -134,7 +134,7 @@ void management::StationTable::retry(std::string key)
   if (this->has(key))
   {
     this->mutex_write.lock();
-    this->table[key].SetUpdate_request_retries(this->table[key].GetUpdate_request_retries() + 1);
+    this->table[key].update_request_retries += 1;
     this->mutex_write.unlock();
   }
 }
