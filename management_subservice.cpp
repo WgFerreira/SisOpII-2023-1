@@ -117,7 +117,9 @@ void management::StationTable::remove(std::string key)
 
 void management::StationTable::update(std::string key, StationStatus new_status, StationType new_type)
 {
-  if (this->has(key))
+  if (this->has(key) && 
+      (this->table[key].GetStatus() != new_status || 
+      this->table[key].GetType() != new_type))
   {
     this->mutex_write.lock();
     this->has_update = true;
