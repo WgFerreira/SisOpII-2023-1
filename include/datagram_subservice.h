@@ -3,25 +3,12 @@
 
 #include <list>
 #include <mutex>
-#include "sleep_server.h"
+#include "queue.h"
+#include "station.h"
 
 namespace datagram {
 
   const int PORT = 50000;
-
-  enum MessageType: unsigned short
-  {
-    // Identifica qual subserviço recebe a mensagem
-    DISCOVERY, 
-    MONITORING,
-    // Identifica o que a mensagem é
-    MANAGER_ELECTION,
-    ELECTION_ANSWER,
-    ELECTION_VICTORY,
-    STATUS_REQUEST,
-    STATUS_RESPONSE,
-    LEAVING
-  };
 
   struct packet
   {
@@ -45,30 +32,6 @@ namespace datagram {
     char _payload[255]; //Dados da mensagem
   };
 
-  struct message
-  {
-    in_addr_t address;
-    MessageType type;
-    Station payload;
-    short sequence;
-  };
-
-  class DatagramQueue
-  {
-  public:
-    std::mutex mutex_sending;
-    std::list<struct message> sending_queue;
-
-    std::mutex mutex_discovery;
-    std::list<struct message> discovery_queue;
-
-    std::mutex mutex_monitoring;
-    std::list<struct message> monitoring_queue;
-
-    std::mutex mutex_sync;
-    std::list<struct message> sync_queue;
-  };
-  
   /**
    * Cria um pacote de dados para ser enviado
   */
@@ -78,17 +41,15 @@ namespace datagram {
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);
 
-  std::string messageTypeToString(MessageType type);
-
   /**
    * Thread que envia mensagens UDP na rede 
   */
-  void *sender(Station *station, DatagramQueue *datagram_queue);
+  void *sender(Station *station, MessageQueue *send_queue);
 
   /**
    * Thread que recebe mensagens UDP da rede 
   */
-  void *receiver(Station *station, DatagramQueue *datagram_queue);
+  void *receiver(Station *station, MessageQueue *discovery_queue, MessageQueue *monitor_queue);
 }
 
 #endif

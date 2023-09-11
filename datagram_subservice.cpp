@@ -5,17 +5,17 @@
 
 using namespace datagram;
 
-void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
+void *datagram::sender(Station *station, MessageQueue *send_queue)
 {
   int sockfd = datagram::open_socket();
 
-  while (station->status != EXITING || !datagram_queue->sending_queue.empty())
+  send_queue->mutex_read.lock();
+  while (station->status != EXITING || !send_queue->queue.empty())
   {
-    if (!datagram_queue->sending_queue.empty() && datagram_queue->mutex_sending.try_lock())
+    send_queue->mutex_read.lock();
+    while (!send_queue->queue.empty())
     {
-      struct message msg = datagram_queue->sending_queue.front();
-      datagram_queue->sending_queue.pop_front();
-      datagram_queue->mutex_sending.unlock();
+      struct message msg = send_queue->pop();
 
       struct sockaddr_in sock_addr = socket_address(msg.address);
       struct packet data = create_packet(msg.type, 0, msg.payload.serialize());
@@ -35,10 +35,12 @@ void *datagram::sender(Station *station, DatagramQueue *datagram_queue)
   }
   
   close(sockfd);
+  if (station->debug)
+    std::cout << "sender: saindo" << std::endl;
   return 0;
 }
 
-void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
+void *datagram::receiver(Station *station, MessageQueue *discovery_queue, MessageQueue *monitor_queue)
 {
   int sockfd = datagram::open_socket();
   
@@ -74,21 +76,19 @@ void *datagram::receiver(Station *station, DatagramQueue *datagram_queue)
       switch (client_data.subservice)
       {
         case DISCOVERY:
-          datagram_queue->mutex_discovery.lock();
-          datagram_queue->discovery_queue.push_back(msg);
-          datagram_queue->mutex_discovery.unlock();
+          discovery_queue->push(msg);
           break;
 
         case MONITORING:
         default:
-          datagram_queue->mutex_monitoring.lock();
-          datagram_queue->monitoring_queue.push_back(msg);
-          datagram_queue->mutex_monitoring.unlock();
+          monitor_queue->push(msg);
       }
     }
   }
 
   close(sockfd);
+  if (station->debug)
+    std::cout << "receiver: saindo" << std::endl;
   return 0;
 }
 
@@ -102,8 +102,7 @@ struct packet datagram::create_packet(MessageType type, short sequence,
     packet.subservice = DISCOVERY;
   packet.type = type;
   packet.seqn = sequence;
-  packet.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::system_clock::now().time_since_epoch() ).count();
+  packet.timestamp = now();
   packet.length = sizeof(payload);
   packet.station = payload;
   return packet;
@@ -115,15 +114,15 @@ int datagram::open_socket()
   if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
     std::cerr << "ERROR opening socket" << std::endl;
       
-  // struct timeval timeout;
-  // timeout.tv_sec = 0;
-  // timeout.tv_usec = 500000; // 500ms
-  // int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-  // if (ret < 0)
-  //   std::cout << "ERROR option timeout" << std::endl;
+  struct timeval timeout;
+  timeout.tv_sec = 1;
+  timeout.tv_usec = 0; // 500ms
+  int ret = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  if (ret < 0)
+    std::cout << "ERROR option timeout" << std::endl;
       
   int broadcastEnable = 1;
-  int ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+  ret = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
   if (ret < 0)
     std::cout << "ERROR option broadcast" << std::endl;
 
@@ -138,26 +137,4 @@ struct sockaddr_in datagram::socket_address(in_addr_t addr)
   address.sin_addr.s_addr = addr;
   memset(&(address.sin_zero), 0, 8);
   return address;
-}
-
-std::string datagram::messageTypeToString(MessageType type)
-{
-  switch (type)
-  {
-  case MessageType::MANAGER_ELECTION :
-    return "MANAGER_ELECTION";
-  case MessageType::ELECTION_ANSWER :
-    return "ELECTION_ANSWER";
-  case MessageType::ELECTION_VICTORY :
-    return "ELECTION_VICTORY";
-  case MessageType::STATUS_REQUEST :
-    return "STATUS_REQUEST";
-  case MessageType::STATUS_RESPONSE :
-    return "STATUS_RESPONSE";
-  case MessageType::LEAVING :
-    return "LEAVING";
-  
-  default:
-    return "NONE";
-  } 
 }

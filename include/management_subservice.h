@@ -9,22 +9,6 @@
 
 namespace management {
   
-  enum ManagerOperation: uint16_t
-  {
-    INSERT,         /** key, station */
-    UPDATE_STATUS,  /** key, new_status */
-    DELETE,         /** key */
-    NONE
-  };
-
-  struct station_op_data
-  {
-    ManagerOperation operation;
-    std::string key;
-    Station station;
-    StationStatus new_status;
-  };
-
   class StationTable
   {
   public:
@@ -45,6 +29,10 @@ namespace management {
     void deserialize(StationTable *table, struct station_table_serial serialized);
     std::list<Station> getValues(unsigned int pid);
     bool has(std::string key);
+    
+    void insert(std::string key, Station item);
+    void remove(std::string key);
+    void update(std::string key, StationStatus new_status);
   };
 
   /**
@@ -57,18 +45,11 @@ namespace management {
     struct station_serial table[100];
   };
 
-  class ManagementQueue
-  {
-  public:
-    std::mutex mutex_manage;
-    std::list<struct station_op_data> manage_queue;
-  };
-
   /**
    * Realiza as operações na tabela de estações
    * 
   */
-  void *manage(Station* station, ManagementQueue *queue, StationTable *table, datagram::DatagramQueue *datagram_queue);
+  void *manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue);
 
 };
 

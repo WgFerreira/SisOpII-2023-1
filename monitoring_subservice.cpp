@@ -15,7 +15,8 @@
 using namespace datagram;
 using namespace management;
 
-void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, ManagementQueue *manage_queue, StationTable *table)
+void *monitoring::monitor_request (Station* station, MessageQueue *send_queue, 
+    OperationQueue *manage_queue, management::StationTable *table)
 {
   while (station->status != EXITING)
   {
@@ -24,43 +25,38 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
      */
     if (station->getType() == MANAGER)
     {
-      std::list<datagram::message> messages;
-      std::list<management::station_op_data> operations;
+      std::list<message> messages;
+      std::list<table_operation> operations;
 
       table->mutex_write.lock();
       auto list = table->getValues(0);
       if (station->debug)
-        std::cout << "monitor: " << list.size() << "participantes para monitorar" << std::endl;
+        std::cout << "monitor: " << list.size() << " participantes para monitorar" << std::endl;
       for (auto &participant : list)
       {
         if (participant.macAddress == station->macAddress)
           continue;
 
-        if (millis_since(participant.last_update) > station->monitor_interval 
-            && millis_since(participant.last_update_request) > station->monitor_interval)
+        if (participant.update_request_retries > 2 && participant.status != ASLEEP)
         {
-          if (participant.update_request_retries > 2 && participant.status != ASLEEP)
-          {
-            if (station->debug)
-              std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
-            struct management::station_op_data op;
-            op.operation = ManagerOperation::UPDATE_STATUS;
-            op.key = participant.macAddress;
-            op.new_status = ASLEEP;
+          if (station->debug)
+            std::cout << "monitor: Um participante parou de responder -> ASLEEP" << std::endl;
+          table_operation op;
+          op.operation = TableOperation::UPDATE_STATUS;
+          op.key = participant.macAddress;
+          op.new_status = ASLEEP;
 
-            operations.push_back(op);
-          }
-            
-          struct message request_msg;
-          request_msg.address = participant.getAddress();
-          request_msg.sequence = 0;
-          request_msg.type = STATUS_REQUEST;
-          request_msg.payload = *station;
-
-          messages.push_back(request_msg);
-          participant.update_request_retries += 1;
-          participant.last_update_request = now();
+          operations.push_back(op);
         }
+          
+        struct message request_msg;
+        request_msg.address = participant.getAddress();
+        request_msg.sequence = 0;
+        request_msg.type = STATUS_REQUEST;
+        request_msg.payload = *station;
+
+        messages.push_back(request_msg);
+        participant.update_request_retries += 1;
       }
       table->mutex_write.unlock();
 
@@ -68,30 +64,52 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
       {
         if (station->debug)
           std::cout << "monitor: Atualizando status de " << messages.size() << " participantes para ASLEEP." << std::endl;
-        manage_queue->mutex_manage.lock();
-        manage_queue->manage_queue.splice(manage_queue->manage_queue.end(), operations);
-        manage_queue->mutex_manage.unlock();
+        manage_queue->push(operations);
       }
 
       if (!messages.empty())
       {
         if (station->debug)
           std::cout << "monitor: Requisitando status de " << messages.size() << " participantes." << std::endl;
-        datagram_queue->mutex_sending.lock();
-        datagram_queue->sending_queue.splice(datagram_queue->sending_queue.end(), messages);
-        datagram_queue->mutex_sending.unlock();
+        send_queue->push(messages);
       }
     }
 
     /**
+     * Monitora o Manager
+    */
+    if (station->getType() == PARTICIPANT && station->getManager() != NULL)
+    {
+      auto millis_update = millis_since(station->last_update);
+      if (millis_update >= station->monitor_interval*1.5)
+      {
+        if (station->debug)
+          std::cout << "monitor: Manager parou de requisitar status a " << millis_update << " ms" << std::endl;
+        station->setManager(NULL);
+        mutex_no_manager.unlock();
+      }
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(station->monitor_interval));
+  }
+
+  if (station->debug)
+    std::cout << "monitor request: saindo" << std::endl;
+  return 0;
+}
+
+void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue, 
+    MessageQueue *monitor_queue, OperationQueue *manage_queue)
+{
+  monitor_queue->mutex_read.lock();
+  while (station->status != EXITING)
+  {
+    monitor_queue->mutex_read.lock();
+    /**
      * Processa mensagens da fila
     */
-    if (!datagram_queue->monitoring_queue.empty()) {
-      datagram_queue->mutex_monitoring.lock();
-
-      struct message msg = datagram_queue->monitoring_queue.front();
-      datagram_queue->monitoring_queue.pop_front();
-      datagram_queue->mutex_monitoring.unlock();
+    while (!monitor_queue->queue.empty()) {
+      struct message msg = monitor_queue->pop();
       
       switch (msg.type)
       {
@@ -105,9 +123,7 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
         response_msg.type = STATUS_RESPONSE;
         response_msg.payload = *station;
 
-        datagram_queue->mutex_sending.lock();
-        datagram_queue->sending_queue.push_back(response_msg);
-        datagram_queue->mutex_sending.unlock();
+        send_queue->push(response_msg);
 
         station->last_update = now();
       }
@@ -118,14 +134,12 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
         {
           if (station->debug)
             std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
-          struct management::station_op_data op;
-          op.operation = ManagerOperation::UPDATE_STATUS;
+          table_operation op;
+          op.operation = TableOperation::UPDATE_STATUS;
           op.key = msg.payload.macAddress;
           op.new_status = AWAKEN;
 
-          manage_queue->mutex_manage.lock();
-          manage_queue->manage_queue.push_back(op);
-          manage_queue->mutex_manage.unlock();
+          manage_queue->push(op);
         }
         break;
       
@@ -133,23 +147,9 @@ void *monitoring::monitor (Station* station, DatagramQueue *datagram_queue, Mana
         break;
       }
     }
-
-    /**
-     * Monitora o Manager
-    *
-    if (station->getType() == PARTICIPANT && station->getManager() != NULL)
-    {
-      auto millis_update = millis_since(station->last_update);
-      if (millis_update >= station->monitor_interval*1.5)
-      {
-        if (station->debug)
-          std::cout << "monitor: Manager parou de requisitar status a " << millis_update << " ms" << std::endl;
-        station->setManager(NULL);
-      }
-    }*/
   }
 
   if (station->debug)
-    std::cout << "saindo monitor" << std::endl;
+    std::cout << "monitor response: saindo" << std::endl;
   return 0;
 }
