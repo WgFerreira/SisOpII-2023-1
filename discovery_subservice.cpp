@@ -238,6 +238,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, Sta
     station->atomic_set([](Station *self) {
         self->SetLast_leader_search(now());
         self->SetLeader_search_retries(0);
+        std::cout << "MANAGER" << std::endl;
         self->SetType(MANAGER);
         self->SetStatus(AWAKEN);
     });
