@@ -136,7 +136,7 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
           // op.operation = TableOperation::UPDATE_STATUS;
           // op.key = msg.payload.macAddress;
           // op.new_status = AWAKEN;
-          op.operation = TableOperation::INSERT;
+          op.operation = TableOperation::UPDATE_STATUS;
           op.key = msg.payload.macAddress;
           op.station = msg.payload;
 
