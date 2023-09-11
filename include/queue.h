@@ -52,7 +52,8 @@ std::string messageTypeToString(MessageType type);
 enum TableOperation: uint16_t
 {
   INSERT,         /** key, station */
-  UPDATE_STATUS,  /** key, new_status */
+  UPDATE_STATUS,  /** key, new_status, new_type */
+  UPDATE_RETRY,  /** key, update_retries */
   DELETE,         /** key */
   NONE
 };
