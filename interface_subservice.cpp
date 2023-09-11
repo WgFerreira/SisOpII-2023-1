@@ -13,7 +13,7 @@
 
 using namespace std;
 
-void *interface::interface (Station* station, management::StationTable* table)
+void *interface::interface (Station* station, StationTable* table)
 {
 	const char separator    = ' ';
 	const int nameWidth     = 30;
@@ -61,7 +61,7 @@ void *interface::interface (Station* station, management::StationTable* table)
 	return 0;
 }
 
-void *interface::command (Station* station, management::StationTable* table) 
+void *interface::command (Station* station, StationTable* table) 
 {
 	string command_values[5];
 	
@@ -86,7 +86,7 @@ void *interface::command (Station* station, management::StationTable* table)
 				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
-					if (tupla.second.GetHostname().compare(command_values[1]))
+					if (tupla.second.GetHostname() == command_values[1])
 					{
 						macAddress = tupla.second.GetMacAddress();
 						break;

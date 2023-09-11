@@ -1,22 +1,12 @@
 #include <iostream>
-// #include <string>
-// #include <cstring>
 #include <thread> // biblioteca de thread c++
-// #include <sys/socket.h>
-// #include <sys/ioctl.h>
-// #include <linux/if.h>
-// #include <netdb.h>
-// #include <unistd.h>
-// #include <ifaddrs.h>
-// #include <arpa/inet.h>
-// #include <semaphore>
-// #include <list>
 
 // Subservices
 #include "include/discovery_subservice.h"
 #include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
+#include "include/replicate_subservice.h"
 #include "include/input_parser.h"
 #include "include/sleep_server.h"
 #include "include/station.h"
@@ -27,9 +17,10 @@ std::mutex mutex_station;
 auto *send_queue = new MessageQueue();
 auto *discovery_queue = new MessageQueue();
 auto *monitor_queue = new MessageQueue();
+auto *replicate_queue = new MessageQueue();
 auto *manage_queue = new OperationQueue();
 
-auto *stationTable = new management::StationTable();
+auto *stationTable = new StationTable();
 
 int main(int argc, const char *argv[]) {
     std::cout << "Initiating Sleep Server" << std::endl;
@@ -55,8 +46,11 @@ int main(int argc, const char *argv[]) {
 
     auto th_interface = std::thread(&interface::interface, station, stationTable);
     auto th_command = std::thread(&interface::command, station, stationTable);
+    
+    auto th_replicate = std::thread(&replicate::replicate, station, send_queue, manage_queue, replicate_queue, stationTable);
+    auto th_load = std::thread(&replicate::load, station, manage_queue, replicate_queue, stationTable);
 
-    management::manage(station, manage_queue, stationTable, send_queue);
+    management::manage(station, manage_queue, stationTable, send_queue, replicate_queue);
 
     th_sender.join();
     th_receiver.join();
@@ -64,9 +58,11 @@ int main(int argc, const char *argv[]) {
     th_election.join();
     th_monitor_request.join();
     th_monitor_respond.join();
-    // // th_management.join();
+    // th_management.join();
     th_interface.join();
     th_command.join();
+    th_replicate.join();
+    th_load.join();
 
     return 0;
 }
@@ -88,7 +84,6 @@ void end_all_threads_safely()
     
     discovery_queue->mutex_read.unlock();
     monitor_queue->mutex_read.unlock();
-
     stationTable->has_update = true;
     manage_queue->mutex_read.unlock();
 }

@@ -20,8 +20,9 @@ void MessageQueue::push(list<message> m)
 
 message MessageQueue::pop() 
 {
+  message m;
   this->mutex_write.lock();
-    message m = this->queue.front();
+    m = this->queue.front();
     this->queue.pop_front();
   this->mutex_write.unlock();
 

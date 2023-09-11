@@ -8,11 +8,12 @@
 
 #include "include/management_subservice.h"
 #include "include/sleep_server.h"
+#include "include/station_table.h"
 
 using namespace std;
 using namespace management;
 
-void *management::manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue) 
+void *management::manage(Station* station, OperationQueue *manage_queue, StationTable *table, MessageQueue *send_queue, MessageQueue *replicate_queue) 
 {
   manage_queue->mutex_read.lock();
   while(station->atomic_GetStatus() != EXITING) 
@@ -59,6 +60,7 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
     if (table->has_update)
     {
       table->mutex_read.unlock();
+      // replicate_queue->mutex_read.unlock();
       if (station->debug)
         std::cout << "management: leitura da tabela liberada" << std::endl;
       // std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -71,110 +73,3 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
     std::cout << "saindo management" << std::endl;
   return 0;
 }
-
-std::list<Station> management::StationTable::getValues(unsigned int pid) 
-{
-  std::list<Station> list;
-
-  this->mutex_write.lock();
-  for (auto &p : this->table)
-    list.push_back(p.second);
-  this->mutex_write.unlock();
-
-  list.remove_if([&](Station &station) { return station.GetPid() <= pid; });
-  return list;
-}
-
-bool management::StationTable::has(std::string key) 
-{
-  this->mutex_write.lock();
-  bool found_key = this->table.find(key) != this->table.end();
-  this->mutex_write.unlock();
-  return found_key;
-}
-
-void management::StationTable::insert(std::string key, Station item)
-{
-  this->mutex_write.lock();
-  this->has_update = true;
-  this->clock += 1;
-  this->table.insert(std::pair<std::string,Station>(key, item));
-  this->table[key].SetUpdate_request_retries(0);
-  this->mutex_write.unlock();
-}
-
-void management::StationTable::remove(std::string key)
-{
-  if (this->has(key))
-  {
-    this->mutex_write.lock();
-    this->has_update = true;
-    this->clock += 1;
-    this->table.erase(key);
-    this->mutex_write.unlock();
-  }
-}
-
-void management::StationTable::update(std::string key, StationStatus new_status, StationType new_type)
-{
-  if (this->has(key))
-  {
-    this->mutex_write.lock();
-    if (this->table[key].GetStatus() != new_status || this->table[key].GetType() != new_type)
-    {
-      this->has_update = true;
-      this->clock += 1;
-      this->table[key].SetStatus(new_status);
-      this->table[key].SetType(new_type);
-    }
-    this->table[key].update_request_retries = 0;
-    this->mutex_write.unlock();
-  }
-}
-
-void management::StationTable::retry(std::string key)
-{
-  if (this->has(key))
-  {
-    this->mutex_write.lock();
-    this->table[key].update_request_retries += 1;
-    this->mutex_write.unlock();
-  }
-}
-
-
-
-struct management::station_table_serial &StationTable::serialize()
-{
-  // unsigned long count = this->table.size();
-  // unsigned long size = (int)ceil(count/100);
-
-  // struct management::station_table_serial serialized[size];
-
-  // for (int i = 0; i < size; i++)
-  // {
-  //   struct management::station_table_serial t;
-
-  //   t.clock = this->clock;
-  //   t.count = this->table.size();
-  //   t.table = new (struct station_serial[t.count]);
-  // }
-  
-
-
-  // return serialized;
-}
-
-void StationTable::deserialize(StationTable *table, station_table_serial serialized)
-{
-  // table->clock = serialized.clock;
-  // table->table.clear();
-  // for (unsigned int i = 0; i < serialized.count; i++)
-  // {
-  //   auto station = Station::deserialize(serialized.table[i]);
-
-  //   table->table.insert(std::pair<std::string,Station>(station.macAddress, station));
-  // }
-}
-
-

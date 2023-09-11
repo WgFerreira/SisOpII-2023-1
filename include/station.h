@@ -67,6 +67,7 @@ public:
 
   Station()
   {   // pega o time_t atual
+    this->last_update = now();
     this->last_leader_search = 0;
   }
 

@@ -1,24 +1,11 @@
 #include "include/discovery_subservice.h"
 
 #include <iostream>
-// #include <cstring>
-// #include <chrono>
-// #include <unistd.h>
-// #include <sys/socket.h>
-// #include <arpa/inet.h>
-
-// #include "include/sleep_server.h"
 
 void *discovery::discovery (Station* station, MessageQueue *send_queue, 
         MessageQueue *discovery_queue, OperationQueue *manage_queue, 
-        management::StationTable *table)
+        StationTable *table)
 {
-    struct table_operation op;
-    op.operation = INSERT;
-    op.key = station->GetMacAddress();
-    op.station = *station;
-    manage_queue->push(op);
-
     discovery_queue->mutex_read.lock();
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -28,6 +15,8 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         */
         while (!discovery_queue->queue.empty()) {
             struct message msg = discovery_queue->pop();
+
+            Station payload = std::get<Station>(msg.payload);
 
             switch (msg.type)
             {
@@ -53,8 +42,8 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     */
                     struct table_operation op;
                     op.operation = INSERT;
-                    op.key = msg.payload.GetMacAddress();
-                    op.station = msg.payload;
+                    op.key = payload.GetMacAddress();
+                    op.station = payload;
 
                     manage_queue->push(op);
                 }
@@ -66,7 +55,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se o remetente é conhecido, houve uma falha
                      * continua o processo de eleição 
                     */
-                    if (table->has(msg.payload.GetMacAddress()))
+                    if (table->has(payload.GetMacAddress()))
                     {
                         if (station->debug)
                             std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
@@ -76,7 +65,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                          * Se existem outras estação conhecidas com o pid mais alto, 
                          * então responde e continua a eleição
                         */
-                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > msg.payload.GetPid()) 
+                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
                         {
                             struct message answer_msg;
                             answer_msg.address = msg.address;
@@ -116,9 +105,9 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     self->SetLast_leader_search(now());
                     self->SetLeader_search_retries(0);
                     self->SetLast_update(now());
-                    self->SetManager(&msg.payload);
+                    self->SetManager(&payload);
                     mutex_no_manager.lock();
-                    table->mutex_read.unlock();
+                    table->mutex_read.unlock(); // update on manage
                 });
                 break;
 
@@ -129,7 +118,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                         std::cout << "discovery: Uma estação está saindo da rede" << std::endl;
                     table_operation op;
                     op.operation = DELETE;
-                    op.key = msg.payload.GetMacAddress();
+                    op.key = payload.GetMacAddress();
 
                     manage_queue->push(op);
                 }
@@ -137,7 +126,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 {
                     if (station->debug)
                         std::cout << "discovery: O Manager está saindo da rede" << std::endl;
-                    if (msg.payload.GetMacAddress() == station->atomic_GetManager()->GetMacAddress()) {
+                    if (payload.GetMacAddress() == station->atomic_GetManager()->GetMacAddress()) {
                         station->atomic_SetManager(NULL);
                         mutex_no_manager.unlock();
                     }
@@ -163,7 +152,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
     return 0;
 }
 
-void *discovery::election(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void *discovery::election(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -197,7 +186,7 @@ void *discovery::election(Station* station, MessageQueue *send_queue, management
     return 0;
 }
 
-void discovery::leader_election(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void discovery::leader_election(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     /**
      * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
@@ -241,7 +230,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, mana
     }
 }
 
-void discovery::election_victory(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void discovery::election_victory(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     station->atomic_set([](Station *self) {
         self->SetLast_leader_search(now());
@@ -252,7 +241,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, man
 
     station->atomic_SetManager(NULL);
     mutex_no_manager.lock();
-    table->mutex_read.unlock();
+    table->mutex_read.unlock(); // update on manager
 
     if (table->table.size() <= 1) {
         if (station->debug)
@@ -274,14 +263,14 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, man
 
 
 void discovery::multicast_election(Station* station, MessageQueue *send_queue, 
-        management::StationTable *table, MessageType type, bool filter_pid)
+        StationTable *table, MessageType type, bool filter_pid)
 {
     std::list<struct message> messages;
 
     table->mutex_write.lock();
     for (auto &s : table->getValues(filter_pid ? station->GetPid() : 0)) {
-        // if (s.GetMacAddress() == station->GetMacAddress())
-        //     continue;
+        if (s.GetMacAddress() == station->GetMacAddress())
+            continue;
 
         struct message election_msg;
         election_msg.address = s.getAddress();
