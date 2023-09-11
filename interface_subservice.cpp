@@ -81,9 +81,9 @@ void *interface::interface (Station* station, management::StationTable* table)
 					
 					cout << left << setw(2) << setfill(separator) << type;
 					cout << left << setw(nameWidth) << setfill(separator) << s.hostname;
-					cout << left << setw(nameWidth) << setfill(separator) << s.macAddress;
-					cout << left << setw(nameWidth) << setfill(separator) << s.ipAddress;
-					cout << left << setw(nameWidth) << setfill(separator) << status;
+					cout << left << setw(20) << setfill(separator) << s.macAddress;
+					cout << left << setw(20) << setfill(separator) << s.ipAddress;
+					cout << left << setw(10) << setfill(separator) << status;
 					cout << endl;
 				}
 			}
