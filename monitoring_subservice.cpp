@@ -133,9 +133,12 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
           if (station->debug)
             std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
           table_operation op;
-          op.operation = TableOperation::UPDATE_STATUS;
+          // op.operation = TableOperation::UPDATE_STATUS;
+          // op.key = msg.payload.macAddress;
+          // op.new_status = AWAKEN;
+          op.operation = TableOperation::INSERT;
           op.key = msg.payload.macAddress;
-          op.new_status = AWAKEN;
+          op.station = msg.payload;
 
           manage_queue->push(op);
         }
