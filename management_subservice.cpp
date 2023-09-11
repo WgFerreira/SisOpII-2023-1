@@ -30,7 +30,7 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
       {
       case INSERT:
         if (station->debug)
-          std::cout << "management: inserindo nova estação" << std::endl;
+          std::cout << "management: inserindo nova estação " << op_data.key << std::endl;
         table->insert(op_data.key, op_data.station);
         break;
 
