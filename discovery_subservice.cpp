@@ -104,17 +104,16 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
             case MessageType::ELECTION_VICTORY :
                 if (station->debug)
                     std::cout << "discovery: Novo Manager Recebido" << std::endl;
-                station->atomic_set([](Station* self) {
+                station->atomic_set([&](Station* self) {
                     self->SetType(PARTICIPANT);
                     self->SetStatus(AWAKEN);
                     self->SetLast_leader_search(now());
                     self->SetLeader_search_retries(0);
                     self->SetLast_update(now());
+                    self->atomic_SetManager(&msg.payload);
+                    mutex_no_manager.lock();
+                    table->mutex_read.unlock();
                 });
-
-                station->atomic_SetManager(&msg.payload);
-                mutex_no_manager.lock();
-                table->mutex_read.unlock();
 
                 break;
 
