@@ -57,6 +57,8 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
 
         messages.push_back(request_msg);
         participant.update_request_retries += 1;
+        if (station->debug)
+          std::cout << "monitor: tentou " << participant.update_request_retries << " vezes" << std::endl;
       }
 
       if (!operations.empty())
