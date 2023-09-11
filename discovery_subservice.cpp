@@ -13,6 +13,12 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         MessageQueue *discovery_queue, OperationQueue *manage_queue, 
         management::StationTable *table)
 {
+    struct table_operation op;
+    op.operation = INSERT;
+    op.key = station->GetMacAddress();
+    op.station = *station;
+    manage_queue->push(op);
+
     discovery_queue->mutex_read.lock();
     while (station->atomic_GetStatus() != EXITING)
     {
