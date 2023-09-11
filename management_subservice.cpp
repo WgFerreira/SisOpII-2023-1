@@ -47,7 +47,7 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
         
       case UPDATE_RETRY:
         if (station->debug)
-          std::cout << "management: atualizando status de uma estação se existir" << std::endl;
+          std::cout << "management: atualizando update retry" << std::endl;
         table->retry(op_data.key);
         break;
 
