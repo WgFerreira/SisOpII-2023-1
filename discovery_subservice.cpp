@@ -218,7 +218,9 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Oper
             std::cout << "discovery: Iniciando Eleição" << std::endl;
         station->atomic_SetType(CANDIDATE);
 
-        if (table->table.empty()) {
+        auto list = table->getValues(0);
+        list.remove_if([&](Station &s) { return s.GetPid() == station->GetPid(); });
+        if (list.size() <= 2) {
             if (station->debug)
                 std::cout << "discovery: Broadcasting eleição" << std::endl;
             struct message election_msg;
