@@ -80,11 +80,14 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
       else {
         station_serial s = client_data.station;
 
-        if (s.pid == station->GetPid())
-          continue;
-
         inet_ntop(AF_INET, &(client_addr.sin_addr), s.ipAddress, INET_ADDRSTRLEN);
         Station participant = Station::deserialize(s);
+
+        if (s.pid == station->GetPid())
+        {
+          station->SetIpAddress(s.ipAddress);
+          continue;
+        }
 
         if (station->debug)
           std::cout << "a message was received " << messageTypeToString(client_data.type) 
