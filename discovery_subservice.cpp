@@ -294,8 +294,10 @@ void discovery::multicast_election(Station* station, MessageQueue *send_queue, O
 {
     std::list<struct message> messages;
 
+    auto list = table->getValues(filter_pid ? station->GetPid() : 0);
+    list.remove_if([&](Station &s) { return s.GetPid() == station->GetPid(); });
     table->mutex_write.lock();
-    for (auto &s : table->getValues(filter_pid ? station->GetPid() : 0)) {
+    for (auto &s : list) {
         // if (s.GetMacAddress() == station->GetMacAddress())
         //     continue;
 
