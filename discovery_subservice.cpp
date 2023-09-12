@@ -66,8 +66,13 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     {
                         if (station->debug)
                             std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
-                        station->atomic_SetManager(NULL);
                         mutex_no_manager.unlock();
+                        station->atomic_SetManager(NULL);
+                        struct table_operation op;
+                        op.operation = INSERT;
+                        op.key = station->GetMacAddress();
+                        op.station = *station;
+                        manage_queue->push(op);
                         /**
                          * Se existem outras estação conhecidas com o pid mais alto, 
                          * então responde e continua a eleição
@@ -93,14 +98,17 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 break;
                 
             case MessageType::ELECTION_ANSWER :
-                if (station->debug)
-                    std::cout << "discovery: Perdeu eleição" << std::endl;
-                station->atomic_set([](Station* self) {
-                    self->SetType(PARTICIPANT);
-                    self->SetStatus(WAITING_ELECTION);
-                    self->SetLast_leader_search(now());
-                    self->SetLeader_search_retries(0);
-                });
+                if (station->atomic_GetStatus() == ELECTING)
+                {
+                    if (station->debug)
+                        std::cout << "discovery: Perdeu eleição" << std::endl;
+                    station->atomic_set([](Station* self) {
+                        self->SetType(PARTICIPANT);
+                        self->SetStatus(WAITING_ELECTION);
+                        self->SetLast_leader_search(now());
+                        self->SetLeader_search_retries(0);
+                    });
+                }
                 break;
                 
             case MessageType::ELECTION_VICTORY :
@@ -240,7 +248,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Oper
         station->atomic_set([](Station *self) {
             self->SetLast_leader_search(now());
             self->SetLeader_search_retries(self->GetLeader_search_retries() + 1);
-            self->SetStatus(ELECTING);
+            // self->SetStatus(ELECTING);
         });
     }
 }
