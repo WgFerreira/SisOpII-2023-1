@@ -76,7 +76,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se existem outras estação conhecidas com o pid mais alto, 
                      * então responde e continua a eleição
                     */
-                    if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
+                    if (station->GetPid() > payload.GetPid()) 
                     {
                         struct message answer_msg;
                         answer_msg.address = msg.address;
@@ -90,7 +90,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se essa é a estação com pid mais alto, 
                      * é provavelmente o novo líder
                     */
-                    else 
+                    if (table->getValues(station->GetPid()).empty()) 
                         election_victory(station, send_queue, manage_queue, table);
                 }
                 break;
