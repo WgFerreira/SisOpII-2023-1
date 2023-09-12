@@ -26,6 +26,8 @@ void *replicate::replicate (Station* station, MessageQueue *send_queue, StationT
 
             auto table_serial = table->serialize();
             auto list = table->getValues(0);
+            if (station->debug)
+                std::cout << "replicate: enviando tabela para " << list.size() << " participantes" << std::endl;
             for (auto participant : list) {
                 if (participant.GetMacAddress() == station->GetMacAddress())
                     continue;
@@ -65,6 +67,8 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
                 auto table_serial = msg.table;
                 if (table_serial.clock > table->clock)
                 {
+                    if (station->debug)
+                        std::cout << "replicate: carregando tabela replicada" << std::endl;
                     std::list<table_operation> ops;
                     for (unsigned int i = 0; i < table_serial.count; i++)
                     {
