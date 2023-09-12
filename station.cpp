@@ -123,6 +123,7 @@ struct station_serial Station::serialize()
     struct station_serial serialized;
 
     serialized.pid = this->pid;
+    serialized.table_clock = this->table_clock;
     serialized.type = this->type;
     serialized.status = this->status;
     strncpy(serialized.hostname, this->hostname.c_str(), HOST_NAME_MAX);
@@ -136,6 +137,7 @@ Station Station::deserialize(struct station_serial serialized)
 {
     Station s;
     s.pid = serialized.pid;
+    s.table_clock = serialized.table_clock;
     s.type = serialized.type;
     s.status = serialized.status;
     s.hostname = std::string(serialized.hostname);

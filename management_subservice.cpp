@@ -54,6 +54,8 @@ void *management::manage(Station* station, OperationQueue *manage_queue, Station
       default:
         break;
       }
+
+      station->SetTable_clock(table->clock);
     }
 
     if (table->has_update)

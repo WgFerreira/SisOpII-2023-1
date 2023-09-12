@@ -62,38 +62,36 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se o remetente é conhecido, houve uma falha
                      * continua o processo de eleição 
                     */
-                    if (table->has(payload.GetMacAddress()))
-                    {
-                        if (station->debug)
-                            std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
-                        mutex_no_manager.unlock();
-                        station->atomic_SetManager(NULL);
-                        struct table_operation op;
-                        op.operation = INSERT;
-                        op.key = station->GetMacAddress();
-                        op.station = *station;
-                        manage_queue->push(op);
-                        /**
-                         * Se existem outras estação conhecidas com o pid mais alto, 
-                         * então responde e continua a eleição
-                        */
-                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
-                        {
-                            struct message answer_msg;
-                            answer_msg.address = msg.address;
-                            answer_msg.sequence = 0;
-                            answer_msg.type = ELECTION_ANSWER;
-                            answer_msg.station = *station;
 
-                            send_queue->push(answer_msg);
-                        }
-                        /**
-                         * Se essa é a estação com pid mais alto, 
-                         * é provavelmente o novo líder
-                        */
-                        else 
-                            election_victory(station, send_queue, manage_queue, table);
+                    if (station->debug)
+                        std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
+                    mutex_no_manager.unlock();
+                    station->atomic_SetManager(NULL);
+                    struct table_operation op;
+                    op.operation = INSERT;
+                    op.key = station->GetMacAddress();
+                    op.station = *station;
+                    manage_queue->push(op);
+                    /**
+                     * Se existem outras estação conhecidas com o pid mais alto, 
+                     * então responde e continua a eleição
+                    */
+                    if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
+                    {
+                        struct message answer_msg;
+                        answer_msg.address = msg.address;
+                        answer_msg.sequence = 0;
+                        answer_msg.type = ELECTION_ANSWER;
+                        answer_msg.station = *station;
+
+                        send_queue->push(answer_msg);
                     }
+                    /**
+                     * Se essa é a estação com pid mais alto, 
+                     * é provavelmente o novo líder
+                    */
+                    else 
+                        election_victory(station, send_queue, manage_queue, table);
                 }
                 break;
                 

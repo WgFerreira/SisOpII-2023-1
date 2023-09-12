@@ -38,6 +38,7 @@ class Station
 {
 private:
   unsigned int pid = 0;
+  unsigned int table_clock = 0;
   StationType type = PARTICIPANT;
 
   Station *manager;
@@ -102,6 +103,12 @@ public:
   void SetIpAddress(std::string ipAddress) {
     this->ipAddress = ipAddress;
   }
+  int GetTable_clock() const {
+    return table_clock;
+  }
+  void SetTable_clock(int table_clock) {
+    table_clock = table_clock;
+  }
   
   /**
    * USAR GET E SET atomico PARA A ESTAÇÃO ATUAL DO SISTEMA
@@ -133,6 +140,7 @@ public:
 struct station_serial
 {
   unsigned int pid;
+  unsigned int table_clock;
   char hostname[HOST_NAME_MAX];
   char ipAddress[INET_ADDRSTRLEN];
   char macAddress[MAC_ADDRESS_MAX];
