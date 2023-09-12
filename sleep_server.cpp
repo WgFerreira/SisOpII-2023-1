@@ -17,6 +17,7 @@
 #include "include/monitoring_subservice.h"
 #include "include/management_subservice.h"
 #include "include/interface_subservice.h"
+#include "include/replicate_subservice.h"
 #include "include/input_parser.h"
 #include "include/sleep_server.h"
 #include "include/station.h"
@@ -57,6 +58,9 @@ int main(int argc, const char *argv[]) {
     auto th_interface = std::thread(&interface::interface, station, stationTable);
     auto th_command = std::thread(&interface::command, station, stationTable);
 
+    auto th_replicate = std::thread(&replicate::replicate, station, send_queue, stationTable);
+    auto th_load = std::thread(&replicate::load, station, manage_queue, replicate_queue, stationTable);
+
     management::manage(station, manage_queue, stationTable, send_queue);
 
     th_sender.join();
@@ -68,6 +72,8 @@ int main(int argc, const char *argv[]) {
     // // th_management.join();
     th_interface.join();
     th_command.join();
+    th_replicate.join();
+    th_load.join();
 
     return 0;
 }
@@ -89,6 +95,7 @@ void end_all_threads_safely()
     
     discovery_queue->mutex_read.unlock();
     monitor_queue->mutex_read.unlock();
+    replicate_queue->mutex_read.unlock();
 
     stationTable->has_update = true;
     manage_queue->mutex_read.unlock();
