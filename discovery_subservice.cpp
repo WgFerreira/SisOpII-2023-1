@@ -11,7 +11,7 @@
 
 void *discovery::discovery (Station* station, MessageQueue *send_queue, 
         MessageQueue *discovery_queue, OperationQueue *manage_queue, 
-        management::StationTable *table)
+        StationTable *table)
 {
     struct table_operation op;
     op.operation = INSERT;
@@ -163,7 +163,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
     return 0;
 }
 
-void *discovery::election(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void *discovery::election(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -197,7 +197,7 @@ void *discovery::election(Station* station, MessageQueue *send_queue, management
     return 0;
 }
 
-void discovery::leader_election(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void discovery::leader_election(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     /**
      * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
@@ -241,7 +241,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, mana
     }
 }
 
-void discovery::election_victory(Station* station, MessageQueue *send_queue, management::StationTable *table)
+void discovery::election_victory(Station* station, MessageQueue *send_queue, StationTable *table)
 {
     station->atomic_set([](Station *self) {
         self->SetLast_leader_search(now());
@@ -274,7 +274,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, man
 
 
 void discovery::multicast_election(Station* station, MessageQueue *send_queue, 
-        management::StationTable *table, MessageType type, bool filter_pid)
+        StationTable *table, MessageType type, bool filter_pid)
 {
     std::list<struct message> messages;
 

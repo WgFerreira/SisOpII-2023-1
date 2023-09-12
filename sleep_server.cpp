@@ -29,7 +29,7 @@ auto *discovery_queue = new MessageQueue();
 auto *monitor_queue = new MessageQueue();
 auto *manage_queue = new OperationQueue();
 
-auto *stationTable = new management::StationTable();
+auto *stationTable = new StationTable();
 
 int main(int argc, const char *argv[]) {
     std::cout << "Initiating Sleep Server" << std::endl;

@@ -16,7 +16,7 @@ using namespace datagram;
 using namespace management;
 
 void *monitoring::monitor_request (Station* station, MessageQueue *send_queue, 
-    OperationQueue *manage_queue, management::StationTable *table)
+    OperationQueue *manage_queue, StationTable *table)
 {
   while (station->atomic_GetStatus() != EXITING)
   {
