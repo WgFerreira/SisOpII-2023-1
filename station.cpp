@@ -77,6 +77,7 @@ void Station::print_interface()
     std::cout << std::left << std::setw(20) << std::setfill(separator) << this->macAddress;
     std::cout << std::left << std::setw(20) << std::setfill(separator) << this->ipAddress;
     std::cout << std::left << std::setw(10) << std::setfill(separator) << status;
+    std::cout << std::left << std::setw(10) << std::setfill(separator) << this->pid;
     std::cout << std::endl;
 }
 
