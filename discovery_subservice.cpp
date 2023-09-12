@@ -107,6 +107,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
             {
                 if (station->debug)
                     std::cout << "discovery: Novo Manager Recebido" << std::endl;
+                mutex_no_manager.lock();
                 station->atomic_set([&](Station* self) {
                     self->SetType(PARTICIPANT);
                     self->SetStatus(AWAKEN);
@@ -114,7 +115,6 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     self->SetLeader_search_retries(0);
                     self->SetLast_update(now());
                     self->SetManager(&payload);
-                    mutex_no_manager.lock();
                 });
                 struct table_operation op;
                 op.operation = INSERT;
@@ -247,15 +247,14 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Oper
 
 void discovery::election_victory(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table)
 {
+    mutex_no_manager.lock();
     station->atomic_set([](Station *self) {
         self->SetLast_leader_search(now());
         self->SetLeader_search_retries(0);
         self->SetType(MANAGER);
         self->SetStatus(AWAKEN);
+        self->SetManager(NULL);
     });
-
-    station->atomic_SetManager(NULL);
-    mutex_no_manager.lock();
 
     struct table_operation op;
     op.operation = INSERT;

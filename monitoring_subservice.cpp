@@ -44,7 +44,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
           op.operation = TableOperation::UPDATE_STATUS;
           op.key = participant.GetMacAddress();
           op.new_status = ASLEEP;
-          op.new_type = participant.GetType();
+          op.new_type = PARTICIPANT;
 
           operations.push_back(op);
         }
