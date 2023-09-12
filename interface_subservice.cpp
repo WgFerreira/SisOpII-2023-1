@@ -86,7 +86,7 @@ void *interface::command (Station* station, StationTable* table)
 				table->mutex_write.lock();
 				for (auto &tupla : table->table)
 				{
-					if (tupla.second.GetHostname().compare(command_values[1]))
+					if (tupla.second.GetHostname().compare(command_values[1]) == 0)
 					{
 						macAddress = tupla.second.GetMacAddress();
 						break;
