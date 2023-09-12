@@ -11,11 +11,6 @@ namespace datagram {
 
   const int PORT = 50000;
 
-  union station_or_table {
-    station_serial s;
-    station_table_serial t;
-  };
-
   struct packet
   {
     MessageType subservice;
@@ -23,15 +18,18 @@ namespace datagram {
     unsigned short seqn; //Número de sequência
     unsigned short length; //Comprimento do payload
     unsigned long timestamp; // Timestamp do dado
-    station_or_table payload;
+    station_serial station;
+    station_table_serial table;
     char _payload[255]; //Dados da mensagem
   };
 
   /**
    * Cria um pacote de dados para ser enviado
   */
-  struct packet create_packet(MessageType type, short sequence,
-      station_or_table payload);
+  struct packet create_packet_station(MessageType type, short sequence,
+      station_serial payload);
+  struct packet create_packet_table(MessageType type, short sequence,
+      station_table_serial payload);
 
   int open_socket();
   struct sockaddr_in socket_address(in_addr_t addr);

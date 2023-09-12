@@ -34,7 +34,7 @@ void *replicate::replicate (Station* station, MessageQueue *send_queue, StationT
                 replication_msg.address = participant.getAddress();
                 replication_msg.sequence = 0;
                 replication_msg.type = REPLICATE;
-                replication_msg.payload = table_serial;
+                replication_msg.table = table_serial;
                 
                 messages.push_back(replication_msg);
             }
@@ -62,7 +62,7 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
             struct message msg = replicate_queue->pop();
             if (msg.type == MessageType::REPLICATE)
             {
-                auto table_serial = std::get<station_table_serial>(msg.payload);
+                auto table_serial = msg.table;
                 if (table_serial.clock > table->clock)
                 {
                     std::list<table_operation> ops;
@@ -152,7 +152,7 @@ void replicate::multicast_replicate(Station* station, station_table_serial table
         replication_msg.address = s.getAddress();
         replication_msg.sequence = 0;
         replication_msg.type = REPLICATE;
-        replication_msg.payload = table_serial;
+        replication_msg.table = table_serial;
         
         messages.push_back(replication_msg);
     }

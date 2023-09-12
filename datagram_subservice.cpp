@@ -20,14 +20,11 @@ void *datagram::sender(Station *station, MessageQueue *send_queue)
 
       struct sockaddr_in sock_addr = socket_address(msg.address);
 
-      station_or_table payload;
+      struct packet data;
       if (msg.type == REPLICATE)
-        payload.t = std::get<station_table_serial>(msg.payload);
-      else {
-        Station s = std::get<Station>(msg.payload);
-        payload.s = s.serialize();
-      }
-      struct packet data = create_packet(msg.type, 0, payload);
+        data = create_packet_table(msg.type, 0, msg.table);
+      else 
+        data = create_packet_station(msg.type, 0, msg.station.serialize());
 
       if (station->debug)
       {
@@ -78,10 +75,10 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
       msg.sequence = client_data.seqn;
 
       if (client_data.subservice == REPLICATION) {
-        msg.payload = client_data.payload.t;
+        msg.table = client_data.table;
       }
       else {
-        station_serial s = client_data.payload.s;
+        station_serial s = client_data.station;
 
         if (s.pid == station->GetPid())
           continue;
@@ -93,7 +90,7 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
           std::cout << "a message was received " << messageTypeToString(client_data.type) 
               << " from " << s.ipAddress << std::endl;
 
-        msg.payload = participant;
+        msg.station = participant;
       }
 
       switch (client_data.subservice)
@@ -119,8 +116,8 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
   return 0;
 }
 
-struct packet datagram::create_packet(MessageType type, short sequence, 
-    station_or_table payload)
+struct packet datagram::create_packet_station(MessageType type, short sequence, 
+    station_serial payload)
 {
   struct packet packet;
   if (type == STATUS_REQUEST || type == STATUS_RESPONSE)
@@ -133,7 +130,25 @@ struct packet datagram::create_packet(MessageType type, short sequence,
   packet.seqn = sequence;
   packet.timestamp = now();
   packet.length = sizeof(payload);
-  packet.payload = payload;
+  packet.station = payload;
+  return packet;
+}
+
+struct packet datagram::create_packet_table(MessageType type, short sequence, 
+    station_table_serial payload)
+{
+  struct packet packet;
+  if (type == STATUS_REQUEST || type == STATUS_RESPONSE)
+    packet.subservice = MONITORING;
+  else if (type == REPLICATE)
+    packet.subservice = REPLICATION;
+  else
+    packet.subservice = DISCOVERY;
+  packet.type = type;
+  packet.seqn = sequence;
+  packet.timestamp = now();
+  packet.length = sizeof(payload);
+  packet.table = payload;
   return packet;
 }
 
