@@ -48,7 +48,7 @@ int main(int argc, const char *argv[]) {
     auto th_receiver = std::thread(&datagram::receiver, station, discovery_queue, monitor_queue, replicate_queue);
 
     auto th_discovery = std::thread(&discovery::discovery, station, send_queue, discovery_queue, manage_queue, stationTable);
-    auto th_election = std::thread(&discovery::election, station, send_queue, stationTable);
+    auto th_election = std::thread(&discovery::election, station, send_queue, manage_queue, stationTable);
 
     auto th_monitor_request = std::thread(&monitoring::monitor_request, station, send_queue, manage_queue, stationTable);
     auto th_monitor_respond = std::thread(&monitoring::monitor_respond, station, send_queue, monitor_queue, manage_queue);

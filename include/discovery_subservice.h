@@ -23,10 +23,10 @@ namespace discovery {
   /**
    * Inicia ou termina uma eleição de líder com o algoritmo bully
   */
-  void *election (Station* station, MessageQueue *send_queue, StationTable *table);
-  void leader_election(Station* station, MessageQueue *send_queue, StationTable *table);
-  void multicast_election(Station* station, MessageQueue *send_queue, StationTable *table, MessageType type, bool filter_pid);
-  void election_victory(Station* station, MessageQueue *send_queue, StationTable *table);
+  void *election (Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table);
+  void leader_election(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table);
+  void multicast_election(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table, MessageType type, bool filter_pid);
+  void election_victory(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table);
 
 };
 

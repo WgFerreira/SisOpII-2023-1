@@ -13,6 +13,12 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         MessageQueue *discovery_queue, OperationQueue *manage_queue, 
         StationTable *table)
 {
+    struct table_operation op;
+    op.operation = INSERT;
+    op.key = station->GetMacAddress();
+    op.station = *station;
+    manage_queue->push(op);
+
     discovery_queue->mutex_read.lock();
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -87,7 +93,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                          * é provavelmente o novo líder
                         */
                         else 
-                            election_victory(station, send_queue, table);
+                            election_victory(station, send_queue, manage_queue, table);
                     }
                 }
                 break;
@@ -104,6 +110,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 break;
                 
             case MessageType::ELECTION_VICTORY :
+            {
                 if (station->debug)
                     std::cout << "discovery: Novo Manager Recebido" << std::endl;
                 station->atomic_set([&](Station* self) {
@@ -114,9 +121,14 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     self->SetLast_update(now());
                     self->SetManager(&payload);
                     mutex_no_manager.lock();
-                    table->mutex_read.unlock();
                 });
+                struct table_operation op;
+                op.operation = INSERT;
+                op.key = station->GetMacAddress();
+                op.station = *station;
+                manage_queue->push(op);
                 break;
+            }
 
             case MessageType::LEAVING :
                 if (station->atomic_GetType() == MANAGER)
@@ -159,7 +171,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
     return 0;
 }
 
-void *discovery::election(Station* station, MessageQueue *send_queue, StationTable *table)
+void *discovery::election(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table)
 {
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -178,7 +190,7 @@ void *discovery::election(Station* station, MessageQueue *send_queue, StationTab
         uint64_t timeout = station->atomic_GetElection_timeout();
         uint64_t last_search = station->atomic_GetLast_leader_search();
         if (station->atomic_GetStatus() == ELECTING && millis_since(last_search) > timeout)
-            leader_election(station, send_queue, table);
+            leader_election(station, send_queue, manage_queue, table);
 
         /**
          * Se já perdeu a eleição, mas ainda nao tem resposta, inicia a eleição de novo
@@ -193,7 +205,7 @@ void *discovery::election(Station* station, MessageQueue *send_queue, StationTab
     return 0;
 }
 
-void discovery::leader_election(Station* station, MessageQueue *send_queue, StationTable *table)
+void discovery::leader_election(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table)
 {
     /**
      * Se é a terceira vez que tenta iniciar a eleição, então não teve resposta e a estação está eleita
@@ -202,7 +214,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Stat
     {
         if (station->debug)
             std::cout << "discovery: Nenhuma Reposta na Eleição" << std::endl;
-        election_victory(station, send_queue, table);
+        election_victory(station, send_queue, manage_queue, table);
     } 
     /**
      * Pode tentar iniciar uma eleição até 2 vezes seguidas
@@ -226,7 +238,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Stat
         else {
             if (station->debug)
                 std::cout << "discovery: Multicasting eleição" << std::endl;
-            multicast_election(station, send_queue, table, MANAGER_ELECTION, true);
+            multicast_election(station, send_queue, manage_queue, table, MANAGER_ELECTION, true);
         }
         
         station->atomic_set([](Station *self) {
@@ -237,7 +249,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Stat
     }
 }
 
-void discovery::election_victory(Station* station, MessageQueue *send_queue, StationTable *table)
+void discovery::election_victory(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, StationTable *table)
 {
     station->atomic_set([](Station *self) {
         self->SetLast_leader_search(now());
@@ -248,9 +260,16 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, Sta
 
     station->atomic_SetManager(NULL);
     mutex_no_manager.lock();
-    table->mutex_read.unlock();
 
-    if (table->table.size() <= 1) {
+    struct table_operation op;
+    op.operation = INSERT;
+    op.key = station->GetMacAddress();
+    op.station = *station;
+    manage_queue->push(op);
+
+    auto list = table->getValues(0);
+    list.remove_if([&](Station &s) { return s.GetPid() == station->GetPid(); });
+    if (list.size() <= 1) {
         if (station->debug)
             std::cout << "discovery: Broadcasting vitória" << std::endl;
         struct message victory_msg;
@@ -264,12 +283,12 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, Sta
     else {
         if (station->debug)
             std::cout << "discovery: Multicasting vitória" << std::endl;
-        multicast_election(station, send_queue, table, ELECTION_VICTORY, false); 
+        multicast_election(station, send_queue, manage_queue, table, ELECTION_VICTORY, false); 
     }
 }
 
 
-void discovery::multicast_election(Station* station, MessageQueue *send_queue, 
+void discovery::multicast_election(Station* station, MessageQueue *send_queue, OperationQueue *manage_queue, 
         StationTable *table, MessageType type, bool filter_pid)
 {
     std::list<struct message> messages;
@@ -288,7 +307,7 @@ void discovery::multicast_election(Station* station, MessageQueue *send_queue,
         messages.push_back(election_msg);
     }
     table->mutex_write.unlock();
-
+    
     send_queue->push(messages);
 }
 
