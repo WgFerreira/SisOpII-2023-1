@@ -21,12 +21,14 @@ class StationTable
     std::mutex mutex_write;
     std::mutex mutex_read;
     bool has_update;
+    bool replicate;
     std::map<std::string,Station> table;
 
     StationTable()
     {   
       this->clock = 0;
       this->has_update = false;
+      this->replicate = false;
       // this->mutex_read.lock();
     }
 

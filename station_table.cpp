@@ -34,6 +34,7 @@ void StationTable::insert(std::string key, Station item)
 {
   this->mutex_write.lock();
   this->has_update = true;
+  this->replicate = true;
   this->clock += 1;
   this->table.insert(std::pair(key, item));
   this->table[key].update_request_retries = 0;
@@ -46,6 +47,7 @@ void StationTable::remove(std::string key)
   {
     this->mutex_write.lock();
     this->has_update = true;
+    this->replicate = true;
     this->clock += 1;
     this->table.erase(key);
     this->mutex_write.unlock();
@@ -58,6 +60,7 @@ void StationTable::update(std::string key, StationStatus new_status, StationType
   {
     this->mutex_write.lock();
     this->has_update = true;
+    this->replicate = true;
     this->clock += 1;
     this->table[key].SetStatus(new_status);
     this->table[key].SetType(new_type);

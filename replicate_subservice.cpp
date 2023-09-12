@@ -20,7 +20,7 @@ void *replicate::replicate (Station* station, MessageQueue *send_queue, StationT
 {
 	while(station->atomic_GetStatus() != EXITING) 
 	{
-        if (station->atomic_GetType() == MANAGER)
+        if (station->atomic_GetType() == MANAGER && table->replicate == true)
         {
             std::list<struct message> messages;
 
@@ -43,6 +43,8 @@ void *replicate::replicate (Station* station, MessageQueue *send_queue, StationT
 
             if (!messages.empty())
                 send_queue->push(messages);
+            
+            table->replicate = false;
         }
 
         auto interval = station->atomic_GetMonitor_interval();
