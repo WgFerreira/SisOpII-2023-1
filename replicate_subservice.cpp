@@ -67,7 +67,7 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
             if (msg.type == MessageType::REPLICATE)
             {
                 auto table_serial = msg.table;
-                if (table_serial.clock > table->clock)
+                if (table_serial.clock >= table->clock)
                 {
                     if (station->debug)
                         std::cout << "replicate: carregando tabela replicada" << std::endl;
@@ -82,6 +82,7 @@ void *replicate::load (Station* station, OperationQueue *manage_queue, MessageQu
 
                         ops.push_back(op_insert);
                     }
+		    table->clock = table_serial.clock;
                     manage_queue->push(ops);
                 }
             }
