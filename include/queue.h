@@ -3,7 +3,6 @@
 
 #include <mutex>
 #include <list>
-#include <variant>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 
@@ -33,7 +32,8 @@ struct message
 {
   in_addr_t address;
   MessageType type;
-  std::variant<Station, station_table_serial> payload;
+  Station station;
+  station_table_serial table;
   short sequence;
 };
 

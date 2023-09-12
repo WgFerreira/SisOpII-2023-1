@@ -23,7 +23,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         while (!discovery_queue->queue.empty()) {
             struct message msg = discovery_queue->pop();
             
-            Station payload = std::get<Station>(msg.payload);
+            Station payload = msg.station;
 
             switch (msg.type)
             {
@@ -40,7 +40,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     victory_msg.address = msg.address;
                     victory_msg.sequence = 0;
                     victory_msg.type = ELECTION_VICTORY;
-                    victory_msg.payload = *station;
+                    victory_msg.station = *station;
 
                     send_queue->push(victory_msg);
                     
@@ -78,7 +78,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                             answer_msg.address = msg.address;
                             answer_msg.sequence = 0;
                             answer_msg.type = ELECTION_ANSWER;
-                            answer_msg.payload = *station;
+                            answer_msg.station = *station;
 
                             send_queue->push(answer_msg);
                         }
@@ -150,7 +150,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
     exit_msg.address = INADDR_BROADCAST;
     exit_msg.sequence = 0;
     exit_msg.type = LEAVING;
-    exit_msg.payload = *station;
+    exit_msg.station = *station;
 
     send_queue->push(exit_msg);
 
@@ -219,7 +219,7 @@ void discovery::leader_election(Station* station, MessageQueue *send_queue, Stat
             election_msg.address = INADDR_BROADCAST;
             election_msg.sequence = 0;
             election_msg.type = MANAGER_ELECTION;
-            election_msg.payload = *station;
+            election_msg.station = *station;
 
             send_queue->push(election_msg);
         }
@@ -257,7 +257,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, Sta
         victory_msg.address = INADDR_BROADCAST;
         victory_msg.sequence = 0;
         victory_msg.type = ELECTION_VICTORY;
-        victory_msg.payload = *station;
+        victory_msg.station = *station;
         
         send_queue->push(victory_msg);
     }
@@ -283,7 +283,7 @@ void discovery::multicast_election(Station* station, MessageQueue *send_queue,
         election_msg.address = s.getAddress();
         election_msg.sequence = 0;
         election_msg.type = type;
-        election_msg.payload = *station;
+        election_msg.station = *station;
         
         messages.push_back(election_msg);
     }

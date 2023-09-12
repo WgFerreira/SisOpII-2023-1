@@ -53,7 +53,7 @@ void *monitoring::monitor_request (Station* station, MessageQueue *send_queue,
         request_msg.address = participant.getAddress();
         request_msg.sequence = 0;
         request_msg.type = STATUS_REQUEST;
-        request_msg.payload = *station;
+        request_msg.station = *station;
 
         messages.push_back(request_msg);
 
@@ -119,7 +119,7 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
     while (!monitor_queue->queue.empty()) {
       struct message msg = monitor_queue->pop();
       
-      Station payload = std::get<Station>(msg.payload);
+      Station payload = msg.station;
 
       switch (msg.type)
       {
@@ -131,7 +131,7 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
         response_msg.address = msg.address;
         response_msg.sequence = 0;
         response_msg.type = STATUS_RESPONSE;
-        response_msg.payload = *station;
+        response_msg.station = *station;
 
         send_queue->push(response_msg);
 
