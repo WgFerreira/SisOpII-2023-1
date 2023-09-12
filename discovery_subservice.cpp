@@ -13,12 +13,6 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         MessageQueue *discovery_queue, OperationQueue *manage_queue, 
         StationTable *table)
 {
-    struct table_operation op;
-    op.operation = INSERT;
-    op.key = station->GetMacAddress();
-    op.station = *station;
-    manage_queue->push(op);
-
     discovery_queue->mutex_read.lock();
     while (station->atomic_GetStatus() != EXITING)
     {
@@ -269,7 +263,7 @@ void discovery::election_victory(Station* station, MessageQueue *send_queue, Ope
 
     auto list = table->getValues(0);
     list.remove_if([&](Station &s) { return s.GetPid() == station->GetPid(); });
-    if (list.size() <= 1) {
+    if (list.size() <= 2) {
         if (station->debug)
             std::cout << "discovery: Broadcasting vitória" << std::endl;
         struct message victory_msg;
