@@ -63,7 +63,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * continua o processo de eleição 
                     */
                     
-                    if (table->has(payload.GetMacAddress()))
+                    if (table->has(payload.GetMacAddress()) && station->atomic_GetStatus() != WAITING_ELECTION)
                     {
 
                     if (station->debug)
