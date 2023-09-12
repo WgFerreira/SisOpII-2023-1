@@ -62,6 +62,9 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se o remetente é conhecido, houve uma falha
                      * continua o processo de eleição 
                     */
+                    
+                    if (table->has(payload.GetMacAddress()))
+                    {
 
                     if (station->debug)
                         std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
@@ -90,8 +93,9 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se essa é a estação com pid mais alto, 
                      * é provavelmente o novo líder
                     */
-                    if (table->getValues(station->GetPid()).empty()) 
-                        election_victory(station, send_queue, manage_queue, table);
+                        if (table->getValues(station->GetPid()).empty()) 
+                    	    election_victory(station, send_queue, manage_queue, table);
+		    }
                 }
                 break;
                 
