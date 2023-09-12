@@ -27,6 +27,7 @@ std::mutex mutex_station;
 auto *send_queue = new MessageQueue();
 auto *discovery_queue = new MessageQueue();
 auto *monitor_queue = new MessageQueue();
+auto *replicate_queue = new MessageQueue();
 auto *manage_queue = new OperationQueue();
 
 auto *stationTable = new StationTable();
@@ -43,7 +44,7 @@ int main(int argc, const char *argv[]) {
     delete args;
 
     auto th_sender = std::thread(&datagram::sender, station, send_queue);
-    auto th_receiver = std::thread(&datagram::receiver, station, discovery_queue, monitor_queue);
+    auto th_receiver = std::thread(&datagram::receiver, station, discovery_queue, monitor_queue, replicate_queue);
 
     auto th_discovery = std::thread(&discovery::discovery, station, send_queue, discovery_queue, manage_queue, stationTable);
     auto th_election = std::thread(&discovery::election, station, send_queue, stationTable);

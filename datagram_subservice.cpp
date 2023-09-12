@@ -19,7 +19,15 @@ void *datagram::sender(Station *station, MessageQueue *send_queue)
       struct message msg = send_queue->pop();
 
       struct sockaddr_in sock_addr = socket_address(msg.address);
-      struct packet data = create_packet(msg.type, 0, msg.payload.serialize());
+      
+      station_or_table payload;
+      if (msg.type == REPLICATE)
+        payload.t = std::get<station_table_serial>(msg.payload);
+      else {
+        Station s = std::get<Station>(msg.payload);
+        payload.s = s.serialize();
+      }
+      struct packet data = create_packet(msg.type, 0, payload);
 
       if (station->debug)
       {
@@ -47,7 +55,7 @@ void *datagram::sender(Station *station, MessageQueue *send_queue)
   return 0;
 }
 
-void *datagram::receiver(Station *station, MessageQueue *discovery_queue, MessageQueue *monitor_queue)
+void *datagram::receiver(Station *station, MessageQueue *discovery_queue, MessageQueue *monitor_queue, MessageQueue *replicate_queue)
 {
   int sockfd = datagram::open_socket();
   
@@ -64,26 +72,38 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
     int n = recvfrom(sockfd, &client_data, sizeof(struct packet), 0, (struct sockaddr *) &client_addr, &client_addr_len);
     if (n > 0)
     {
-      if (client_data.station.pid == station->GetPid())
-        continue;
-        
-      inet_ntop(AF_INET, &(client_addr.sin_addr), client_data.station.ipAddress, INET_ADDRSTRLEN);
-      Station participant = Station::deserialize(client_data.station);
-
-      if (station->debug)
-        std::cout << "a message was received " << messageTypeToString(client_data.type) 
-            << " from " << client_data.station.ipAddress << std::endl;
-
       struct message msg;
       msg.type = client_data.type;
       msg.address = client_addr.sin_addr.s_addr;
-      msg.payload = participant;
       msg.sequence = client_data.seqn;
+
+      if (client_data.subservice == REPLICATION) {
+        msg.payload = client_data.payload.t;
+      }
+      else {
+        station_serial s = client_data.payload.s;
+
+        if (s.pid == station->GetPid())
+          continue;
+
+        inet_ntop(AF_INET, &(client_addr.sin_addr), s.ipAddress, INET_ADDRSTRLEN);
+        Station participant = Station::deserialize(s);
+
+        if (station->debug)
+          std::cout << "a message was received " << messageTypeToString(client_data.type) 
+              << " from " << s.ipAddress << std::endl;
+
+        msg.payload = participant;
+      }
 
       switch (client_data.subservice)
       {
         case DISCOVERY:
           discovery_queue->push(msg);
+          break;
+
+        case REPLICATION:
+          replicate_queue->push(msg);
           break;
 
         case MONITORING:
@@ -100,7 +120,7 @@ void *datagram::receiver(Station *station, MessageQueue *discovery_queue, Messag
 }
 
 struct packet datagram::create_packet(MessageType type, short sequence, 
-    struct station_serial payload)
+    station_or_table payload)
 {
   struct packet packet;
   if (type == STATUS_REQUEST || type == STATUS_RESPONSE)
@@ -111,7 +131,7 @@ struct packet datagram::create_packet(MessageType type, short sequence,
   packet.seqn = sequence;
   packet.timestamp = now();
   packet.length = sizeof(payload);
-  packet.station = payload;
+  packet.payload = payload;
   return packet;
 }
 

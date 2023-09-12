@@ -22,6 +22,8 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
         */
         while (!discovery_queue->queue.empty()) {
             struct message msg = discovery_queue->pop();
+            
+            Station payload = std::get<Station>(msg.payload);
 
             switch (msg.type)
             {
@@ -47,8 +49,8 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     */
                     struct table_operation op;
                     op.operation = INSERT;
-                    op.key = msg.payload.GetMacAddress();
-                    op.station = msg.payload;
+                    op.key = payload.GetMacAddress();
+                    op.station = payload;
 
                     manage_queue->push(op);
                 }
@@ -60,7 +62,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                      * Se o remetente é conhecido, houve uma falha
                      * continua o processo de eleição 
                     */
-                    if (table->has(msg.payload.GetMacAddress()))
+                    if (table->has(payload.GetMacAddress()))
                     {
                         if (station->debug)
                             std::cout << "discovery: Participante recebeu mensagem de eleição" << std::endl;
@@ -70,7 +72,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                          * Se existem outras estação conhecidas com o pid mais alto, 
                          * então responde e continua a eleição
                         */
-                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > msg.payload.GetPid()) 
+                        if (table->getValues(station->GetPid()).size() > 0 || station->GetPid() > payload.GetPid()) 
                         {
                             struct message answer_msg;
                             answer_msg.address = msg.address;
@@ -110,7 +112,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                     self->SetLast_leader_search(now());
                     self->SetLeader_search_retries(0);
                     self->SetLast_update(now());
-                    self->SetManager(&msg.payload);
+                    self->SetManager(&payload);
                     mutex_no_manager.lock();
                     table->mutex_read.unlock();
                 });
@@ -123,7 +125,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                         std::cout << "discovery: Uma estação está saindo da rede" << std::endl;
                     table_operation op;
                     op.operation = DELETE;
-                    op.key = msg.payload.GetMacAddress();
+                    op.key = payload.GetMacAddress();
 
                     manage_queue->push(op);
                 }
@@ -131,7 +133,7 @@ void *discovery::discovery (Station* station, MessageQueue *send_queue,
                 {
                     if (station->debug)
                         std::cout << "discovery: O Manager está saindo da rede" << std::endl;
-                    if (msg.payload.GetMacAddress() == station->atomic_GetManager()->GetMacAddress()) {
+                    if (payload.GetMacAddress() == station->atomic_GetManager()->GetMacAddress()) {
                         station->atomic_SetManager(NULL);
                         mutex_no_manager.unlock();
                     }

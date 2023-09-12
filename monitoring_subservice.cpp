@@ -119,6 +119,8 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
     while (!monitor_queue->queue.empty()) {
       struct message msg = monitor_queue->pop();
       
+      Station payload = std::get<Station>(msg.payload);
+
       switch (msg.type)
       {
       case MessageType::STATUS_REQUEST : 
@@ -144,9 +146,9 @@ void *monitoring::monitor_respond (Station* station, MessageQueue *send_queue,
             std::cout << "monitor: Recebeu resposta de um participante" << std::endl;
           table_operation op;
           op.operation = TableOperation::UPDATE_STATUS;
-          op.key = msg.payload.GetMacAddress();
-          op.new_status = msg.payload.GetStatus();
-          op.new_type = msg.payload.GetType();
+          op.key = payload.GetMacAddress();
+          op.new_status = payload.GetStatus();
+          op.new_type = payload.GetType();
 
           manage_queue->push(op);
         }
