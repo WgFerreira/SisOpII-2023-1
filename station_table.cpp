@@ -80,10 +80,10 @@ void StationTable::retry(std::string key)
 
 struct station_table_serial StationTable::serialize()
 {
-  this->mutex_write.lock();
-
   station_table_serial serialized;
   auto stationList = this->getValues(0);
+
+  this->mutex_write.lock();
   serialized.count = stationList.size();
   serialized.clock = this->clock;
 
